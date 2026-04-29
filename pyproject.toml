@@ -1,0 +1,25 @@
+[project]
+name = "rocopath"
+version = "0.1.5"
+description = "洛克王国：世界工具箱"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "loguru>=0.7.3",
+    "opencv-python>=4.13.0.92",
+    "ortools>=9.15.6755",
+    "pillow>=12.2.0",
+    "pydantic>=2.13.3",
+    "pyside6>=6.11.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[[tool.uv.index]]
+name = "ustc"
+url = "https://pypi.mirrors.ustc.edu.cn/simple/"
+
+[dependency-groups]
+dev = ["pyinstaller>=6.19.0", "pytest>=9.0.3"]

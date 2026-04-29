@@ -1,0 +1,30 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# 历史文件
+.bak
+
+# 工程文件
+.vscode
+.pytest_cache
+
+# 大文件数据（不提交到 Git）
+# 保留空目录结构，忽略其中所有内容
+assets/data/*
+!assets/data/.gitkeep
+
+assets/maps/Maps_PC/*
+assets/maps/Masks_PC/*
+assets/maps/*
+!assets/maps/.gitkeep
+
+# pyinstaller spec
+rocopoth.spec

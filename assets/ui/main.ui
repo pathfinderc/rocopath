@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>977</width>
+    <height>667</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>洛寻</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,5,2">
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,9">
+      <item>
+       <widget class="QGroupBox" name="search_group">
+        <property name="title">
+         <string>搜索</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="3,1">
+         <item>
+          <widget class="QLineEdit" name="line_search">
+           <property name="placeholderText">
+            <string>搜索点位名称</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="search_button">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>查询</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="point_filter">
+        <property name="title">
+         <string>点位筛选</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QTabWidget" name="tabWidget">
+           <property name="currentIndex">
+            <number>0</number>
+           </property>
+           <widget class="QWidget" name="tab_1">
+            <attribute name="title">
+             <string>常用</string>
+            </attribute>
+           </widget>
+           <widget class="QWidget" name="tab_2">
+            <attribute name="title">
+             <string>自定义</string>
+            </attribute>
+           </widget>
+           <widget class="QWidget" name="tab_3">
+            <attribute name="title">
+             <string>高级</string>
+            </attribute>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="map_group">
+      <property name="title">
+       <string>地图</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="3,3,4">
+      <item>
+       <widget class="QGroupBox" name="route_group">
+        <property name="title">
+         <string>路线规划</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_5">
+           <item>
+            <widget class="QPushButton" name="select_all">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>全选</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="clear_select">
+             <property name="text">
+              <string>清空选中状态</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="reset_all">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>清空全部</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QLabel" name="select_num">
+           <property name="text">
+            <string>选中点位：</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="start_status">
+           <property name="text">
+            <string>起点：</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_6">
+           <item>
+            <widget class="QPushButton" name="plan_route">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>80</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>规划路径</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="remove_select">
+             <property name="maximumSize">
+              <size>
+               <width>100</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>移除边</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="merge_select">
+             <property name="maximumSize">
+              <size>
+               <width>100</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>合并选中路径</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>使用说明</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_4">
+         <item>
+          <widget class="QTextBrowser" name="help_text"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="info_group">
+        <property name="title">
+         <string>点位信息</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_4">
+         <item>
+          <widget class="QTextBrowser" name="point_info"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>977</width>
+     <height>33</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu_file">
+    <property name="title">
+     <string>文件</string>
+    </property>
+    <addaction name="action_import"/>
+    <addaction name="action_export_point"/>
+    <addaction name="action_export"/>
+    <addaction name="action_compatible_export"/>
+    <addaction name="action_new_compatible_export"/>
+    <addaction name="action_export_route"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menu_help">
+    <property name="title">
+     <string>帮助</string>
+    </property>
+    <addaction name="action_key"/>
+    <addaction name="action_about"/>
+   </widget>
+   <widget class="QMenu" name="menu_map">
+    <property name="title">
+     <string>地图</string>
+    </property>
+    <addaction name="action_main_map"/>
+    <addaction name="action_magic_map"/>
+   </widget>
+   <addaction name="menu_file"/>
+   <addaction name="menu_map"/>
+   <addaction name="menu_help"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_import">
+   <property name="text">
+    <string>导入点位</string>
+   </property>
+  </action>
+  <action name="action_export">
+   <property name="text">
+    <string>导出全部</string>
+   </property>
+  </action>
+  <action name="action_about">
+   <property name="text">
+    <string>关于</string>
+   </property>
+  </action>
+  <action name="action_main_map">
+   <property name="text">
+    <string>卡罗西亚</string>
+   </property>
+  </action>
+  <action name="action_magic_map">
+   <property name="text">
+    <string>魔法学院</string>
+   </property>
+  </action>
+  <action name="action_key">
+   <property name="text">
+    <string>键位</string>
+   </property>
+  </action>
+  <action name="action_compatible_export">
+   <property name="text">
+    <string>导出兼容格式(6.0之前）</string>
+   </property>
+  </action>
+  <action name="action_import_point">
+   <property name="text">
+    <string>导入点位</string>
+   </property>
+  </action>
+  <action name="action_export_point">
+   <property name="text">
+    <string>导出点位</string>
+   </property>
+  </action>
+  <action name="action_export_route">
+   <property name="text">
+    <string>导出路径</string>
+   </property>
+  </action>
+  <action name="action_new_compatible_export">
+   <property name="text">
+    <string>导出兼容格式（6.0及之后）</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
