@@ -12,7 +12,7 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsPathItem
 from PySide6.QtGui import QPixmap, QPainterPath, QPen, QColor, QBrush
 from rocopath.ui.npc_point_item import NpcPointItem
-from rocopath.core.route_planner import NearestNeighborPlanner, BaseRoutePlanner
+from rocopath.core.route_planner import OrToolsTspPlanner, BaseRoutePlanner
 from rocopath.models import NpcPoint, WorldMapInfo
 
 
@@ -55,7 +55,7 @@ class MapScene(QGraphicsScene):
         self._planned_routes: list[PlannedRoute] = []
         # 路径规划算法
         self._route_planner: BaseRoutePlanner = (
-            route_planner or NearestNeighborPlanner()
+            route_planner or OrToolsTspPlanner(time_limit_sec=3)
         )
 
     def add_background_pixmap(self, pixmap: QPixmap) -> None:

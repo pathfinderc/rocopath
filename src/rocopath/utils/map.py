@@ -9,12 +9,9 @@
 - load_and_composite_map: 从瓦片拼接并合成遮罩，生成完整地图（用于预处理）
 """
 
-from pathlib import Path
 from PIL import Image
-import cv2
-import numpy as np
 from loguru import logger
-from rocopath.config import MAPS_PC_DIR, MASKS_PC_DIR, MAP_DATA_DIR
+from rocopath.config import MAP_DATA_DIR
 
 
 def get_map(map_id: str) -> Image.Image | None:

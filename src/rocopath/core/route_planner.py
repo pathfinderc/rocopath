@@ -51,24 +51,65 @@ class BaseRoutePlanner(ABC):
         使用地图边长进行缩放，保证X/Y/Z尺度一致，避免数值溢出。
         """
         if a.area is None or b.area is None:
-            # 没有区域信息，按地图坐标距离计算
             dx = a.map_x - b.map_x
             dy = a.map_y - b.map_y
             return sqrt(dx * dx + dy * dy)
 
-        # 世界坐标差
         dx_world = a.area.world_x - b.area.world_x
         dy_world = a.area.world_y - b.area.world_y
         dz_world = a.area.world_z - b.area.world_z
 
-        # 统一缩放：世界坐标 -> 匹配地图像素尺度
         scale = world_map.side_length / NpcLoader.MAP_PIXEL_SIZE
         dx = dx_world / scale
         dy = dy_world / scale
         dz = dz_world / scale
 
-        # 3D欧氏距离
         return sqrt(dx * dx + dy * dy + dz * dz)
+
+    def _two_opt_improve(
+        self,
+        path: list[NpcPoint],
+        world_map: WorldMapInfo
+    ) -> list[NpcPoint]:
+        """2-opt 局部搜索：消除路径自交（路线重叠）
+
+        在欧氏平面上，任何自交的路径都是次优的——解开交叉总能
+        通过三角不等式缩短总距离。2-opt 反复检查每对不相邻的边，
+        若交换后距离更短则执行翻转，直到不存在可改进的交叉。
+
+        时间复杂度 O(n²·k)，k 为收敛迭代次数（通常 2-5 次）。
+        对于已无交叉的路径仅验证一次即可退出。
+        """
+        n = len(path)
+        if n <= 3:
+            return path
+
+        best = list(path)
+        improved = True
+
+        while improved:
+            improved = False
+            # 检查每对不相邻的边 (i,i+1) 和 (j,j+1)
+            for i in range(n - 2):
+                a = best[i]
+                b = best[i + 1]
+                ab = self.distance(a, b, world_map)
+
+                for j in range(i + 2, n - 1):
+                    c = best[j]
+                    d = best[j + 1]
+                    cd = self.distance(c, d, world_map)
+
+                    # 翻转后新边: a→c 和 b→d
+                    ac = self.distance(a, c, world_map)
+                    bd = self.distance(b, d, world_map)
+
+                    if ac + bd < ab + cd:
+                        # 翻转 i+1 到 j 之间的路径段
+                        best[i + 1:j + 1] = reversed(best[i + 1:j + 1])
+                        improved = True
+
+        return best
 
 
 class NearestNeighborPlanner(BaseRoutePlanner):
@@ -107,7 +148,6 @@ class NearestNeighborPlanner(BaseRoutePlanner):
         current = start
 
         while unvisited_ids:
-            # 找离当前点最近的未访问点
             nearest: NpcPoint | None = None
             min_dist = float('inf')
             for candidate_id in unvisited_ids:
@@ -124,107 +164,7 @@ class NearestNeighborPlanner(BaseRoutePlanner):
             unvisited_ids.remove(nearest.refresh_id)
             current = nearest
 
-        return path
-
-
-class MidpointNearestNeighborPlanner(BaseRoutePlanner):
-    """中点最近邻路径规划算法
-
-    相比纯最近邻算法的改进：选择下一个点时，不是找距离"最后一个点"最近，而是找距离"最后两个点的中点"最近
-    这样可以减少路径弯曲，得到更平滑的路径
-
-    算法逻辑：
-    1. 从指定起点开始
-    2. 只有起点时 → 找距离起点最近的点（和最近邻一样）
-    3. 有两个或更多点时 → 计算最后两个点的中点，找距离这个中点最近的未访问点
-    4. 重复直到所有点都被访问
-
-    相比纯最近邻：路径更平滑，不会频繁急转弯，总距离通常更优
-    时间复杂度还是 O(n²)，和最近邻一样快
-    """
-
-    def plan(
-        self,
-        points: list[NpcPoint],
-        start: NpcPoint,
-        world_map: WorldMapInfo
-    ) -> list[NpcPoint]:
-        if len(points) <= 1:
-            return list(points)
-
-        # 确保起点在列表中
-        if not any(p.refresh_id == start.refresh_id for p in points):
-            points = [start] + list(points)
-
-        # 使用 refresh_id (int) 跟踪未访问，因为 NpcPoint 不可哈希
-        point_map = {p.refresh_id: p for p in points}
-        unvisited_ids = set(point_map.keys())
-        unvisited_ids.remove(start.refresh_id)
-
-        path = [start]
-
-        while unvisited_ids:
-            if len(path) == 1:
-                # 只有起点：找距离起点最近的点（和最近邻一样）
-                current = path[0]
-                nearest: NpcPoint | None = None
-                min_dist = float('inf')
-                for candidate_id in unvisited_ids:
-                    candidate = point_map[candidate_id]
-                    dist = self.distance(current, candidate, world_map)
-                    if dist < min_dist:
-                        min_dist = dist
-                        nearest = candidate
-            else:
-                # 两个点或更多：计算最后两个点的中点
-                last1 = path[-1]
-                last2 = path[-2]
-
-                # 计算中点坐标（世界坐标经过缩放后）
-                # 我们用距离函数的相同缩放来计算中点
-                if last1.area is not None and last2.area is not None:
-                    # 使用世界坐标计算中点
-                    scale = world_map.side_length / NpcLoader.MAP_PIXEL_SIZE
-                    mid_x = (last1.area.world_x + last2.area.world_x) / 2 / scale
-                    mid_y = (last1.area.world_y + last2.area.world_y) / 2 / scale
-                    mid_z = (last1.area.world_z + last2.area.world_z) / 2 / scale
-                else:
-                    # 没有区域信息，使用地图坐标
-                    mid_x = (last1.map_x + last2.map_x) / 2
-                    mid_y = (last1.map_y + last2.map_y) / 2
-                    mid_z = 0
-
-                # 找距离中点最近的未访问点
-                nearest: NpcPoint | None = None
-                min_dist = float('inf')
-                for candidate_id in unvisited_ids:
-                    candidate = point_map[candidate_id]
-                    # 计算候选点到中点的距离
-                    if candidate.area is not None:
-                        scale = world_map.side_length / NpcLoader.MAP_PIXEL_SIZE
-                        cx = candidate.area.world_x / scale
-                        cy = candidate.area.world_y / scale
-                        cz = candidate.area.world_z / scale
-                        dx = cx - mid_x
-                        dy = cy - mid_y
-                        dz = cz - mid_z
-                        dist = (dx*dx + dy*dy + dz*dz)**0.5
-                    else:
-                        dx = candidate.map_x - mid_x
-                        dy = candidate.map_y - mid_y
-                        dist = (dx*dx + dy*dy)**0.5
-
-                    if dist < min_dist:
-                        min_dist = dist
-                        nearest = candidate
-
-            if nearest is None:
-                break
-
-            path.append(nearest)
-            unvisited_ids.remove(nearest.refresh_id)
-
-        return path
+        return self._two_opt_improve(path, world_map)
 
 
 class ExactTspPlanner(BaseRoutePlanner):
@@ -447,7 +387,6 @@ class OrToolsTspPlanner(BaseRoutePlanner):
         if path_indices and path_indices[0] == path_indices[-1]:
             path_indices.pop()
 
-        # 转换回点位列表
         result = [point_list[i] for i in path_indices]
 
-        return result
+        return self._two_opt_improve(result, world_map)
