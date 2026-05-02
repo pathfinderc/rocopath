@@ -8,7 +8,7 @@
 - point_id 为 str 类型
 """
 
-from PySide6.QtCore import Signal, QObject, QPointF
+from PySide6.QtCore import Signal, QObject, QPointF, QRectF
 from PySide6.QtWidgets import QGraphicsItemGroup, QGraphicsPathItem
 from PySide6.QtGui import QBrush, QColor, QPen, QPainterPath
 from rocopath.models.path_point import PathPoint
@@ -27,6 +27,7 @@ class PathPointItem(QObject, QGraphicsItemGroup):
     """
 
     point_selected = Signal(str)  # 发出选中的 point_id
+    point_moved = Signal(str)     # 拖拽移动后发出 point_id
 
     def __init__(self, path_point: PathPoint):
         QObject.__init__(self)
@@ -54,16 +55,16 @@ class PathPointItem(QObject, QGraphicsItemGroup):
         self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsFocusable, True)
         self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIgnoresTransformations, True)
+        self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemSendsGeometryChanges, True)
         self.setAcceptHoverEvents(True)
         self.setZValue(10)
 
-        # 可拖拽（在 add_path 模式下由外部控制行为）
+        # 可拖拽（在 add_path 模式下由外部控制）
         self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsMovable, False)
 
     def set_movable(self, movable: bool) -> None:
         """设置是否可拖拽移动（仅在 add_path 模式下启用）"""
         self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsMovable, movable)
-        self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemSendsGeometryChanges, True)
 
     @property
     def point_id(self) -> str:
@@ -100,8 +101,10 @@ class PathPointItem(QObject, QGraphicsItemGroup):
     def itemChange(self, change, value):
         if change == QGraphicsItemGroup.GraphicsItemChange.ItemPositionHasChanged:
             # 拖拽后同步更新 model 坐标
-            self.path_point.map_x = self.pos().x()
-            self.path_point.map_y = self.pos().y()
+            new_pos = self.pos()
+            self.path_point.map_x = new_pos.x()
+            self.path_point.map_y = new_pos.y()
+            self.point_moved.emit(self.point_id)
         return super().itemChange(change, value)
 
     def set_in_box_selection(self, in_selection: bool) -> None:

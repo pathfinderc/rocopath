@@ -132,6 +132,14 @@ class MapView(QGraphicsView):
                     isinstance(item, (NpcPointItem, PathPointItem))
                     for item in items
                 )
+                # 手动 hit-test 回退：QGraphicsScene.items() 可能漏掉 QGraphicsItemGroup
+                if not has_point_item:
+                    for pp_item in self.scene()._path_point_items:
+                        dx = pp_item.pos().x() - scene_pos.x()
+                        dy = pp_item.pos().y() - scene_pos.y()
+                        if (dx * dx + dy * dy) < 144:  # 12 像素命中半径
+                            has_point_item = True
+                            break
                 if not has_point_item:
                     self.path_point_created.emit(scene_pos)
                 # 不启动左键拖拽平移

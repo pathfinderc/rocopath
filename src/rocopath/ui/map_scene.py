@@ -446,17 +446,12 @@ class MapScene(QGraphicsScene):
         self.addItem(item)
         self._path_point_items.append(item)
         item.point_selected.connect(self.point_selected.emit)
-
-        # 绘制到前一个点的临时虚线
-        if self._in_progress_path:
-            prev = self._in_progress_path[-1]
-            line = QGraphicsLineItem(prev.map_x, prev.map_y, scene_x, scene_y)
-            line.setPen(QPen(QColor(100, 149, 237, 180), 2, Qt.PenStyle.DashLine))
-            line.setZValue(4)
-            self.addItem(line)
-            self._in_progress_lines.append(line)
+        item.point_moved.connect(self._on_path_point_moved)
 
         self._in_progress_path.append(point)
+
+        # 绘制临时连线
+        self._rebuild_temp_lines()
 
     def add_imported_route(
         self, path_points: list[PathPoint], total_distance: float, name: str = ""
@@ -467,6 +462,7 @@ class MapScene(QGraphicsScene):
             self.addItem(item)
             self._path_point_items.append(item)
             item.point_selected.connect(self.point_selected.emit)
+            item.point_moved.connect(self._on_path_point_moved)
 
         if len(path_points) >= 2:
             self.add_route_path(path_points, total_distance)
@@ -480,6 +476,54 @@ class MapScene(QGraphicsScene):
         self._clear_temp_lines()
 
     # ===== 内部方法 =====
+
+    def _on_path_point_moved(self, point_id: str) -> None:
+        """路径点被拖动后更新所有关联的边"""
+        self._rebuild_temp_lines()
+        self._redraw_routes_for_point(point_id)
+
+    def _rebuild_temp_lines(self) -> None:
+        """重建当前构建中路径的临时连线"""
+        self._clear_temp_lines()
+        if len(self._in_progress_path) >= 2:
+            for i in range(len(self._in_progress_path) - 1):
+                a = self._in_progress_path[i]
+                b = self._in_progress_path[i + 1]
+                line = QGraphicsLineItem(a.map_x, a.map_y, b.map_x, b.map_y)
+                line.setPen(QPen(QColor(255, 80, 40, 220), 2.5, Qt.PenStyle.SolidLine))
+                line.setZValue(4)
+                self.addItem(line)
+                self._in_progress_lines.append(line)
+
+    def _redraw_routes_for_point(self, point_id: str) -> None:
+        """重新绘制包含指定路径点的所有已规划路径"""
+        for route in self._planned_routes:
+            has_point = any(
+                hasattr(p, 'point_id') and p.point_id == point_id
+                for p in route.points
+            )
+            if not has_point:
+                continue
+            # 移除旧边
+            if route.path_item and route.path_item.scene() == self:
+                self.removeItem(route.path_item)
+                route.path_item = None
+
+            # 重绘路径
+            points = route.points
+            if len(points) < 2:
+                continue
+            path = QPainterPath()
+            path.moveTo(points[0].map_x, points[0].map_y)
+            for p in points[1:]:
+                path.lineTo(p.map_x, p.map_y)
+            path_item = QGraphicsPathItem(path)
+            pen = QPen(QColor(*route.color), 3)
+            pen.setCosmetic(True)
+            path_item.setPen(pen)
+            path_item.setZValue(5)
+            self.addItem(path_item)
+            route.path_item = path_item
 
     def _finalize_in_progress_path(self) -> None:
         """将当前构建中的路径转换为正式路径"""
