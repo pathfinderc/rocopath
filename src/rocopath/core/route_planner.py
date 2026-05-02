@@ -10,9 +10,15 @@
 
 from abc import ABC, abstractmethod
 from math import sqrt
+from typing import Union, TYPE_CHECKING
 from ortools.constraint_solver import routing_enums_pb2, pywrapcp
 from rocopath.models import NpcPoint, WorldMapInfo
 from rocopath.core.npc_loader import NpcLoader
+
+if TYPE_CHECKING:
+    from rocopath.models.path_point import PathPoint
+
+PlannablePoint = Union[NpcPoint, "PathPoint"]
 
 
 class BaseRoutePlanner(ABC):
@@ -24,10 +30,10 @@ class BaseRoutePlanner(ABC):
     @abstractmethod
     def plan(
         self,
-        points: list[NpcPoint],
-        start: NpcPoint,
+        points: list[PlannablePoint],
+        start: PlannablePoint,
         world_map: WorldMapInfo
-    ) -> list[NpcPoint]:
+    ) -> list[PlannablePoint]:
         """规划路径，从起点出发访问所有点。
 
         Args:
@@ -42,8 +48,8 @@ class BaseRoutePlanner(ABC):
 
     def distance(
         self,
-        a: NpcPoint,
-        b: NpcPoint,
+        a: PlannablePoint,
+        b: PlannablePoint,
         world_map: WorldMapInfo
     ) -> float:
         """计算两点之间的3D欧氏距离（包含Z坐标，统一缩放）
@@ -87,28 +93,28 @@ class NearestNeighborPlanner(BaseRoutePlanner):
 
     def plan(
         self,
-        points: list[NpcPoint],
-        start: NpcPoint,
+        points: list[PlannablePoint],
+        start: PlannablePoint,
         world_map: WorldMapInfo
-    ) -> list[NpcPoint]:
+    ) -> list[PlannablePoint]:
         if len(points) <= 1:
             return list(points)
 
         # 确保起点在列表中
-        if not any(p.refresh_id == start.refresh_id for p in points):
+        if not any(p.point_id == start.point_id for p in points):
             points = [start] + list(points)
 
-        # 使用 refresh_id (int) 跟踪未访问，因为 NpcPoint 不可哈希
-        point_map = {p.refresh_id: p for p in points}
+        # 使用 point_id (str) 跟踪未访问，因为 NpcPoint 不可哈希
+        point_map = {p.point_id: p for p in points}
         unvisited_ids = set(point_map.keys())
-        unvisited_ids.remove(start.refresh_id)
+        unvisited_ids.remove(start.point_id)
 
         path = [start]
         current = start
 
         while unvisited_ids:
             # 找离当前点最近的未访问点
-            nearest: NpcPoint | None = None
+            nearest: PlannablePoint | None = None
             min_dist = float('inf')
             for candidate_id in unvisited_ids:
                 candidate = point_map[candidate_id]
@@ -121,7 +127,7 @@ class NearestNeighborPlanner(BaseRoutePlanner):
                 break
 
             path.append(nearest)
-            unvisited_ids.remove(nearest.refresh_id)
+            unvisited_ids.remove(nearest.point_id)
             current = nearest
 
         return path
@@ -145,21 +151,21 @@ class MidpointNearestNeighborPlanner(BaseRoutePlanner):
 
     def plan(
         self,
-        points: list[NpcPoint],
-        start: NpcPoint,
+        points: list[PlannablePoint],
+        start: PlannablePoint,
         world_map: WorldMapInfo
-    ) -> list[NpcPoint]:
+    ) -> list[PlannablePoint]:
         if len(points) <= 1:
             return list(points)
 
         # 确保起点在列表中
-        if not any(p.refresh_id == start.refresh_id for p in points):
+        if not any(p.point_id == start.point_id for p in points):
             points = [start] + list(points)
 
-        # 使用 refresh_id (int) 跟踪未访问，因为 NpcPoint 不可哈希
-        point_map = {p.refresh_id: p for p in points}
+        # 使用 point_id (str) 跟踪未访问，因为 NpcPoint 不可哈希
+        point_map = {p.point_id: p for p in points}
         unvisited_ids = set(point_map.keys())
-        unvisited_ids.remove(start.refresh_id)
+        unvisited_ids.remove(start.point_id)
 
         path = [start]
 
@@ -167,7 +173,7 @@ class MidpointNearestNeighborPlanner(BaseRoutePlanner):
             if len(path) == 1:
                 # 只有起点：找距离起点最近的点（和最近邻一样）
                 current = path[0]
-                nearest: NpcPoint | None = None
+                nearest: PlannablePoint | None = None
                 min_dist = float('inf')
                 for candidate_id in unvisited_ids:
                     candidate = point_map[candidate_id]
@@ -195,7 +201,7 @@ class MidpointNearestNeighborPlanner(BaseRoutePlanner):
                     mid_z = 0
 
                 # 找距离中点最近的未访问点
-                nearest: NpcPoint | None = None
+                nearest: PlannablePoint | None = None
                 min_dist = float('inf')
                 for candidate_id in unvisited_ids:
                     candidate = point_map[candidate_id]
@@ -222,7 +228,7 @@ class MidpointNearestNeighborPlanner(BaseRoutePlanner):
                 break
 
             path.append(nearest)
-            unvisited_ids.remove(nearest.refresh_id)
+            unvisited_ids.remove(nearest.point_id)
 
         return path
 
@@ -245,10 +251,10 @@ class ExactTspPlanner(BaseRoutePlanner):
 
     def plan(
         self,
-        points: list[NpcPoint],
-        start: NpcPoint,
+        points: list[PlannablePoint],
+        start: PlannablePoint,
         world_map: WorldMapInfo
-    ) -> list[NpcPoint]:
+    ) -> list[PlannablePoint]:
         n = len(points)
         if n <= 1:
             return list(points)
@@ -260,14 +266,14 @@ class ExactTspPlanner(BaseRoutePlanner):
         # 将起点放到索引0位置
         point_list = list(points)
         # 如果起点不在列表中，添加到开头
-        if not any(p.refresh_id == start.refresh_id for p in point_list):
+        if not any(p.point_id == start.point_id for p in point_list):
             point_list = [start] + point_list
             n = len(point_list)
 
         # 重新排列，让起点在索引0
         start_index = 0
         for i, p in enumerate(point_list):
-            if p.refresh_id == start.refresh_id:
+            if p.point_id == start.point_id:
                 start_index = i
                 break
         if start_index != 0:
@@ -378,10 +384,10 @@ class OrToolsTspPlanner(BaseRoutePlanner):
 
     def plan(
         self,
-        points: list[NpcPoint],
-        start: NpcPoint,
+        points: list[PlannablePoint],
+        start: PlannablePoint,
         world_map: WorldMapInfo
-    ) -> list[NpcPoint]:
+    ) -> list[PlannablePoint]:
         n = len(points)
         if n <= 1:
             return list(points)
@@ -389,14 +395,14 @@ class OrToolsTspPlanner(BaseRoutePlanner):
         # 将起点放到索引0位置
         point_list = list(points)
         # 如果起点不在列表中，添加到开头
-        if not any(p.refresh_id == start.refresh_id for p in point_list):
+        if not any(p.point_id == start.point_id for p in point_list):
             point_list = [start] + point_list
             n = len(point_list)
 
         # 重新排列，让起点在索引0
         start_index = 0
         for i, p in enumerate(point_list):
-            if p.refresh_id == start.refresh_id:
+            if p.point_id == start.point_id:
                 start_index = i
                 break
         if start_index != 0:

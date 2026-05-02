@@ -77,6 +77,29 @@ def transform_coordinate(original_x: float, original_y: float) -> tuple[int, int
     return compatible_x, compatible_y
 
 
+def parse_compatible_json(json_str: str) -> tuple[str, bool, str, list[tuple[float, float, str]]]:
+    """解析旧版兼容格式 JSON，逆变换坐标
+
+    Args:
+        json_str: JSON 字符串
+
+    Returns:
+        (name, loop, notes, [(original_x, original_y, label), ...])
+    """
+    data = json.loads(json_str)
+    name = data.get("name", "")
+    loop = data.get("loop", False)
+    notes = data.get("notes", "")
+    points = []
+    for p in data.get("points", []):
+        # 逆变换：original = compatible - offset
+        orig_x = p["x"] - OFFSET_X
+        orig_y = p["y"] - OFFSET_Y
+        label = p.get("label", "")
+        points.append((orig_x, orig_y, label))
+    return name, loop, notes, points
+
+
 def generate_compatible_json(
     name: str,
     notes: str,

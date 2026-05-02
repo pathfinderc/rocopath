@@ -6,6 +6,7 @@ from .npc import (
     WorldMapInfo,
     NpcPoint,
 )
+from .path_point import PathPoint
 
 __all__ = [
     # base models
@@ -18,4 +19,6 @@ __all__ = [
     "AreaInfo",
     "WorldMapInfo",
     "NpcPoint",
+    # path point model
+    "PathPoint",
 ]

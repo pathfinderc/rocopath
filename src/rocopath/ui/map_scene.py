@@ -422,6 +422,10 @@ class MapScene(QGraphicsScene):
 
         return planned_path, total_distance
 
+    def set_route_planner(self, planner: BaseRoutePlanner) -> None:
+        """切换路径规划算法"""
+        self._route_planner = planner
+
     # ===== add_path 模式 =====
 
     def enter_add_path_mode(self) -> None:

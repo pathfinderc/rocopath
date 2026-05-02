@@ -4,7 +4,9 @@
 封装所有导出/导入的UI交互逻辑，保持主窗口代码简洁。
 """
 
+import json
 import os
+from math import sqrt
 from collections.abc import Callable
 from PySide6.QtWidgets import (
     QMainWindow, QMessageBox, QDialog, QPushButton,
@@ -232,6 +234,65 @@ class ExportImportPanel:
             self._show_info("导出成功", msg)
             self._show_status(f"导出完成: {file_path}")
             logger.info("导出所有规划路径成功: {}", file_path)
+
+    # ===== 兼容格式导入 =====
+
+    def import_compatible_old(self) -> None:
+        """导入旧版兼容格式路径（pre-6.0），逆变换坐标"""
+        from rocopath.exporters.compatible import parse_compatible_json
+        self._import_compatible_routes(parse_compatible_json, "导入兼容路径（旧版）")
+
+    def import_compatible_new(self) -> None:
+        """导入新版兼容格式路径（6.0），坐标保持原样"""
+        from rocopath.exporters.compatible_new import parse_new_compatible_json
+        self._import_compatible_routes(parse_new_compatible_json, "导入兼容路径（新版）")
+
+    def _import_compatible_routes(
+        self, parse_func: Callable, dialog_title: str
+    ) -> None:
+        """兼容格式导入的通用逻辑"""
+        file_path = self._get_open_file_path(dialog_title)
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                json_content = f.read()
+        except Exception as e:
+            logger.error("读取导入文件失败: {}", str(e))
+            self._show_error("读取失败", f"读取文件时出错:\n{str(e)}")
+            return
+
+        try:
+            name, loop, notes, points_data = parse_func(json_content)
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            logger.error("解析导入JSON失败: {}", str(e))
+            self._show_error("格式错误", f"文件格式不正确:\n{str(e)}")
+            return
+
+        if not points_data:
+            self._show_warning("没有路径点", "文件中没有可导入的路径点")
+            return
+
+        from rocopath.models.path_point import PathPoint
+
+        path_points = [
+            PathPoint(map_x=x, map_y=y, label=label)
+            for x, y, label in points_data
+        ]
+
+        total_distance = sum(
+            sqrt((a.map_x - b.map_x) ** 2 + (a.map_y - b.map_y) ** 2)
+            for a, b in zip(path_points, path_points[1:])
+        )
+
+        scene = self._get_map_scene()
+        scene.add_imported_route(path_points, total_distance, name)
+
+        self._show_status(
+            f"导入完成: {name} ({len(path_points)} 个点, 距离 {total_distance:.1f})"
+        )
+        logger.info("兼容格式导入成功: {} {} 个点", name, len(path_points))
 
     # ===== 内部辅助函数 =====
 

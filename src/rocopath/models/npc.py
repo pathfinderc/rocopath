@@ -98,6 +98,11 @@ class NpcPoint(BaseModel):
     """转换后地图上的Y坐标（像素）"""
 
     @property
+    def point_id(self) -> str:
+        """统一标识符，用于路径规划和选择系统"""
+        return f"npc:{self.refresh_id}"
+
+    @property
     def display_name(self) -> str:
         """显示名称"""
-        return self.npc.editor_name or self.npc.name 
+        return self.npc.editor_name or self.npc.name

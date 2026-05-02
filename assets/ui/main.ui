@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>977</width>
+    <width>990</width>
     <height>667</height>
    </rect>
   </property>
@@ -14,7 +14,7 @@
    <string>洛寻</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,5,2">
+   <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,6,2">
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,9">
       <item>
@@ -87,13 +87,13 @@
      </widget>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="3,3,4">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="4,4,3">
       <item>
        <widget class="QGroupBox" name="route_group">
         <property name="title">
          <string>路线规划</string>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,1,1,1,1,1,1">
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <item>
@@ -106,13 +106,6 @@
              </property>
              <property name="text">
               <string>全选</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="clear_select">
-             <property name="text">
-              <string>清空选中状态</string>
              </property>
             </widget>
            </item>
@@ -132,6 +125,25 @@
           </layout>
          </item>
          <item>
+          <widget class="QPushButton" name="clear_select">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>100</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>清空选中状态</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="select_num">
            <property name="text">
             <string>选中点位：</string>
@@ -146,7 +158,64 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="add_path">
+           <property name="text">
+            <string>添加路径</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_7">
+           <item>
+            <widget class="QPushButton" name="remove_select">
+             <property name="maximumSize">
+              <size>
+               <width>100</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>移除选中</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="merge_select">
+             <property name="maximumSize">
+              <size>
+               <width>100</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>合并选中路径</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
           <layout class="QHBoxLayout" name="horizontalLayout_6">
+           <item>
+            <widget class="QComboBox" name="plan_mode">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <item>
+              <property name="text">
+               <string>快速模式</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>质量模式</string>
+              </property>
+             </item>
+            </widget>
+           </item>
            <item>
             <widget class="QPushButton" name="plan_route">
              <property name="sizePolicy">
@@ -163,32 +232,6 @@
              </property>
              <property name="text">
               <string>规划路径</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="remove_select">
-             <property name="maximumSize">
-              <size>
-               <width>100</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>移除边</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="merge_select">
-             <property name="maximumSize">
-              <size>
-               <width>100</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>合并选中路径</string>
              </property>
             </widget>
            </item>
@@ -230,7 +273,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>977</width>
+     <width>990</width>
      <height>33</height>
     </rect>
    </property>
@@ -238,13 +281,34 @@
     <property name="title">
      <string>文件</string>
     </property>
-    <addaction name="action_import"/>
-    <addaction name="action_export_point"/>
-    <addaction name="action_export"/>
-    <addaction name="action_compatible_export"/>
-    <addaction name="action_new_compatible_export"/>
-    <addaction name="action_export_route"/>
+    <widget class="QMenu" name="menu">
+     <property name="title">
+      <string>导出路径</string>
+     </property>
+     <addaction name="action_export_route"/>
+     <addaction name="action_compatible_export"/>
+     <addaction name="action_new_compatible_export"/>
+    </widget>
+    <widget class="QMenu" name="menu_2">
+     <property name="title">
+      <string>导出资源点</string>
+     </property>
+     <addaction name="action_export_point"/>
+     <addaction name="action_export_all_points"/>
+    </widget>
+    <widget class="QMenu" name="menu_3">
+     <property name="title">
+      <string>导入路径</string>
+     </property>
+     <addaction name="action_import_route"/>
+     <addaction name="action_import_old"/>
+     <addaction name="action_import_new"/>
+    </widget>
+    <addaction name="action_import_points"/>
+    <addaction name="menu_2"/>
     <addaction name="separator"/>
+    <addaction name="menu_3"/>
+    <addaction name="menu"/>
    </widget>
    <widget class="QMenu" name="menu_help">
     <property name="title">
@@ -265,9 +329,9 @@
    <addaction name="menu_help"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="action_import">
+  <action name="action_import_points">
    <property name="text">
-    <string>导入点位</string>
+    <string>导入资源点文件</string>
    </property>
   </action>
   <action name="action_export">
@@ -307,17 +371,37 @@
   </action>
   <action name="action_export_point">
    <property name="text">
-    <string>导出点位</string>
+    <string>导出当前显示点位</string>
    </property>
   </action>
   <action name="action_export_route">
    <property name="text">
-    <string>导出路径</string>
+    <string>导出</string>
    </property>
   </action>
   <action name="action_new_compatible_export">
    <property name="text">
     <string>导出兼容格式（6.0及之后）</string>
+   </property>
+  </action>
+  <action name="action_import_old">
+   <property name="text">
+    <string>导入兼容格式（6.0之前）</string>
+   </property>
+  </action>
+  <action name="action_import_new">
+   <property name="text">
+    <string>导入兼容格式（6.0）</string>
+   </property>
+  </action>
+  <action name="action_import_route">
+   <property name="text">
+    <string>导入</string>
+   </property>
+  </action>
+  <action name="action_export_all_points">
+   <property name="text">
+    <string>导出全部</string>
    </property>
   </action>
  </widget>

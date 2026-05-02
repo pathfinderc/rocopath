@@ -52,13 +52,14 @@ class NpcPointItem(QObject, QGraphicsItemGroup):
     - 可点击选中，发出信号
     """
 
-    point_selected = Signal(int)  # 发出选中的 refresh_id
+    point_selected = Signal(str)  # 发出选中的 point_id
 
     def __init__(self, point: NpcPoint, radius: float = DEFAULT_RADIUS):
         QObject.__init__(self)
         QGraphicsItemGroup.__init__(self)
         self.refresh_id = point.refresh_id
         self.npc_point = point
+        self._point_id = f"npc:{point.refresh_id}"
         self._radius = radius
         self._is_selected = False
 
@@ -100,7 +101,7 @@ class NpcPointItem(QObject, QGraphicsItemGroup):
 
     def mousePressEvent(self, event):
         """鼠标点击：发出选中信号"""
-        self.point_selected.emit(self.refresh_id)
+        self.point_selected.emit(self.point_id)
         super().mousePressEvent(event)
 
     def hoverEnterEvent(self, event):
@@ -175,6 +176,10 @@ class NpcPointItem(QObject, QGraphicsItemGroup):
         self._in_box_selection = False
         self._is_route_start = False
         self._update_visual_style()
+
+    @property
+    def point_id(self) -> str:
+        return self._point_id
 
     @property
     def is_in_box_selection(self) -> bool:

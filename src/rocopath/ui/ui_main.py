@@ -16,18 +16,19 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QMainWindow, QMenu, QMenuBar,
-    QPushButton, QSizePolicy, QStatusBar, QTabWidget,
-    QTextBrowser, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGroupBox,
+    QHBoxLayout, QLabel, QLineEdit, QMainWindow,
+    QMenu, QMenuBar, QPushButton, QSizePolicy,
+    QStatusBar, QTabWidget, QTextBrowser, QVBoxLayout,
+    QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(977, 667)
-        self.action_import = QAction(MainWindow)
-        self.action_import.setObjectName(u"action_import")
+        MainWindow.resize(990, 667)
+        self.action_import_points = QAction(MainWindow)
+        self.action_import_points.setObjectName(u"action_import_points")
         self.action_export = QAction(MainWindow)
         self.action_export.setObjectName(u"action_export")
         self.action_about = QAction(MainWindow)
@@ -48,6 +49,14 @@ class Ui_MainWindow(object):
         self.action_export_route.setObjectName(u"action_export_route")
         self.action_new_compatible_export = QAction(MainWindow)
         self.action_new_compatible_export.setObjectName(u"action_new_compatible_export")
+        self.action_import_old = QAction(MainWindow)
+        self.action_import_old.setObjectName(u"action_import_old")
+        self.action_import_new = QAction(MainWindow)
+        self.action_import_new.setObjectName(u"action_import_new")
+        self.action_import_route = QAction(MainWindow)
+        self.action_import_route.setObjectName(u"action_import_route")
+        self.action_export_all_points = QAction(MainWindow)
+        self.action_export_all_points.setObjectName(u"action_export_all_points")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.horizontalLayout_3 = QHBoxLayout(self.centralwidget)
@@ -127,11 +136,6 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_5.addWidget(self.select_all)
 
-        self.clear_select = QPushButton(self.route_group)
-        self.clear_select.setObjectName(u"clear_select")
-
-        self.horizontalLayout_5.addWidget(self.clear_select)
-
         self.reset_all = QPushButton(self.route_group)
         self.reset_all.setObjectName(u"reset_all")
         sizePolicy1.setHeightForWidth(self.reset_all.sizePolicy().hasHeightForWidth())
@@ -141,6 +145,17 @@ class Ui_MainWindow(object):
 
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_5)
+
+        self.clear_select = QPushButton(self.route_group)
+        self.clear_select.setObjectName(u"clear_select")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.clear_select.sizePolicy().hasHeightForWidth())
+        self.clear_select.setSizePolicy(sizePolicy2)
+        self.clear_select.setMaximumSize(QSize(100, 60))
+
+        self.verticalLayout_3.addWidget(self.clear_select)
 
         self.select_num = QLabel(self.route_group)
         self.select_num.setObjectName(u"select_num")
@@ -152,8 +167,39 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_3.addWidget(self.start_status)
 
+        self.add_path = QCheckBox(self.route_group)
+        self.add_path.setObjectName(u"add_path")
+
+        self.verticalLayout_3.addWidget(self.add_path)
+
+        self.horizontalLayout_7 = QHBoxLayout()
+        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.remove_select = QPushButton(self.route_group)
+        self.remove_select.setObjectName(u"remove_select")
+        self.remove_select.setMaximumSize(QSize(100, 16777215))
+
+        self.horizontalLayout_7.addWidget(self.remove_select)
+
+        self.merge_select = QPushButton(self.route_group)
+        self.merge_select.setObjectName(u"merge_select")
+        self.merge_select.setMaximumSize(QSize(100, 16777215))
+
+        self.horizontalLayout_7.addWidget(self.merge_select)
+
+
+        self.verticalLayout_3.addLayout(self.horizontalLayout_7)
+
         self.horizontalLayout_6 = QHBoxLayout()
         self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
+        self.plan_mode = QComboBox(self.route_group)
+        self.plan_mode.addItem("")
+        self.plan_mode.addItem("")
+        self.plan_mode.setObjectName(u"plan_mode")
+        sizePolicy1.setHeightForWidth(self.plan_mode.sizePolicy().hasHeightForWidth())
+        self.plan_mode.setSizePolicy(sizePolicy1)
+
+        self.horizontalLayout_6.addWidget(self.plan_mode)
+
         self.plan_route = QPushButton(self.route_group)
         self.plan_route.setObjectName(u"plan_route")
         sizePolicy1.setHeightForWidth(self.plan_route.sizePolicy().hasHeightForWidth())
@@ -162,21 +208,16 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_6.addWidget(self.plan_route)
 
-        self.remove_select = QPushButton(self.route_group)
-        self.remove_select.setObjectName(u"remove_select")
-        self.remove_select.setMaximumSize(QSize(100, 16777215))
-
-        self.horizontalLayout_6.addWidget(self.remove_select)
-
-        self.merge_select = QPushButton(self.route_group)
-        self.merge_select.setObjectName(u"merge_select")
-        self.merge_select.setMaximumSize(QSize(100, 16777215))
-
-        self.horizontalLayout_6.addWidget(self.merge_select)
-
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_6)
 
+        self.verticalLayout_3.setStretch(0, 1)
+        self.verticalLayout_3.setStretch(1, 1)
+        self.verticalLayout_3.setStretch(2, 1)
+        self.verticalLayout_3.setStretch(3, 1)
+        self.verticalLayout_3.setStretch(4, 1)
+        self.verticalLayout_3.setStretch(5, 1)
+        self.verticalLayout_3.setStretch(6, 1)
 
         self.verticalLayout.addWidget(self.route_group)
 
@@ -204,21 +245,27 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.info_group)
 
-        self.verticalLayout.setStretch(0, 3)
-        self.verticalLayout.setStretch(1, 3)
-        self.verticalLayout.setStretch(2, 4)
+        self.verticalLayout.setStretch(0, 4)
+        self.verticalLayout.setStretch(1, 4)
+        self.verticalLayout.setStretch(2, 3)
 
         self.horizontalLayout_3.addLayout(self.verticalLayout)
 
         self.horizontalLayout_3.setStretch(0, 2)
-        self.horizontalLayout_3.setStretch(1, 5)
+        self.horizontalLayout_3.setStretch(1, 6)
         self.horizontalLayout_3.setStretch(2, 2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 977, 33))
+        self.menubar.setGeometry(QRect(0, 0, 990, 33))
         self.menu_file = QMenu(self.menubar)
         self.menu_file.setObjectName(u"menu_file")
+        self.menu = QMenu(self.menu_file)
+        self.menu.setObjectName(u"menu")
+        self.menu_2 = QMenu(self.menu_file)
+        self.menu_2.setObjectName(u"menu_2")
+        self.menu_3 = QMenu(self.menu_file)
+        self.menu_3.setObjectName(u"menu_3")
         self.menu_help = QMenu(self.menubar)
         self.menu_help.setObjectName(u"menu_help")
         self.menu_map = QMenu(self.menubar)
@@ -231,13 +278,19 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menu_file.menuAction())
         self.menubar.addAction(self.menu_map.menuAction())
         self.menubar.addAction(self.menu_help.menuAction())
-        self.menu_file.addAction(self.action_import)
-        self.menu_file.addAction(self.action_export_point)
-        self.menu_file.addAction(self.action_export)
-        self.menu_file.addAction(self.action_compatible_export)
-        self.menu_file.addAction(self.action_new_compatible_export)
-        self.menu_file.addAction(self.action_export_route)
+        self.menu_file.addAction(self.action_import_points)
+        self.menu_file.addAction(self.menu_2.menuAction())
         self.menu_file.addSeparator()
+        self.menu_file.addAction(self.menu_3.menuAction())
+        self.menu_file.addAction(self.menu.menuAction())
+        self.menu.addAction(self.action_export_route)
+        self.menu.addAction(self.action_compatible_export)
+        self.menu.addAction(self.action_new_compatible_export)
+        self.menu_2.addAction(self.action_export_point)
+        self.menu_2.addAction(self.action_export_all_points)
+        self.menu_3.addAction(self.action_import_route)
+        self.menu_3.addAction(self.action_import_old)
+        self.menu_3.addAction(self.action_import_new)
         self.menu_help.addAction(self.action_key)
         self.menu_help.addAction(self.action_about)
         self.menu_map.addAction(self.action_main_map)
@@ -253,7 +306,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"\u6d1b\u5bfb", None))
-        self.action_import.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u5165\u70b9\u4f4d", None))
+        self.action_import_points.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u5165\u8d44\u6e90\u70b9\u6587\u4ef6", None))
         self.action_export.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa\u5168\u90e8", None))
         self.action_about.setText(QCoreApplication.translate("MainWindow", u"\u5173\u4e8e", None))
         self.action_main_map.setText(QCoreApplication.translate("MainWindow", u"\u5361\u7f57\u897f\u4e9a", None))
@@ -261,9 +314,13 @@ class Ui_MainWindow(object):
         self.action_key.setText(QCoreApplication.translate("MainWindow", u"\u952e\u4f4d", None))
         self.action_compatible_export.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa\u517c\u5bb9\u683c\u5f0f(6.0\u4e4b\u524d\uff09", None))
         self.action_import_point.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u5165\u70b9\u4f4d", None))
-        self.action_export_point.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa\u70b9\u4f4d", None))
-        self.action_export_route.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa\u8def\u5f84", None))
+        self.action_export_point.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa\u5f53\u524d\u663e\u793a\u70b9\u4f4d", None))
+        self.action_export_route.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa", None))
         self.action_new_compatible_export.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa\u517c\u5bb9\u683c\u5f0f\uff086.0\u53ca\u4e4b\u540e\uff09", None))
+        self.action_import_old.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u5165\u517c\u5bb9\u683c\u5f0f\uff086.0\u4e4b\u524d\uff09", None))
+        self.action_import_new.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u5165\u517c\u5bb9\u683c\u5f0f\uff086.0\uff09", None))
+        self.action_import_route.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u5165", None))
+        self.action_export_all_points.setText(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa\u5168\u90e8", None))
         self.search_group.setTitle(QCoreApplication.translate("MainWindow", u"\u641c\u7d22", None))
         self.line_search.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u641c\u7d22\u70b9\u4f4d\u540d\u79f0", None))
         self.search_button.setText(QCoreApplication.translate("MainWindow", u"\u67e5\u8be2", None))
@@ -274,16 +331,23 @@ class Ui_MainWindow(object):
         self.map_group.setTitle(QCoreApplication.translate("MainWindow", u"\u5730\u56fe", None))
         self.route_group.setTitle(QCoreApplication.translate("MainWindow", u"\u8def\u7ebf\u89c4\u5212", None))
         self.select_all.setText(QCoreApplication.translate("MainWindow", u"\u5168\u9009", None))
-        self.clear_select.setText(QCoreApplication.translate("MainWindow", u"\u6e05\u7a7a\u9009\u4e2d\u72b6\u6001", None))
         self.reset_all.setText(QCoreApplication.translate("MainWindow", u"\u6e05\u7a7a\u5168\u90e8", None))
+        self.clear_select.setText(QCoreApplication.translate("MainWindow", u"\u6e05\u7a7a\u9009\u4e2d\u72b6\u6001", None))
         self.select_num.setText(QCoreApplication.translate("MainWindow", u"\u9009\u4e2d\u70b9\u4f4d\uff1a", None))
         self.start_status.setText(QCoreApplication.translate("MainWindow", u"\u8d77\u70b9\uff1a", None))
-        self.plan_route.setText(QCoreApplication.translate("MainWindow", u"\u89c4\u5212\u8def\u5f84", None))
-        self.remove_select.setText(QCoreApplication.translate("MainWindow", u"\u79fb\u9664\u8fb9", None))
+        self.add_path.setText(QCoreApplication.translate("MainWindow", u"\u6dfb\u52a0\u8def\u5f84", None))
+        self.remove_select.setText(QCoreApplication.translate("MainWindow", u"\u79fb\u9664\u9009\u4e2d", None))
         self.merge_select.setText(QCoreApplication.translate("MainWindow", u"\u5408\u5e76\u9009\u4e2d\u8def\u5f84", None))
+        self.plan_mode.setItemText(0, QCoreApplication.translate("MainWindow", u"\u5feb\u901f\u6a21\u5f0f", None))
+        self.plan_mode.setItemText(1, QCoreApplication.translate("MainWindow", u"\u8d28\u91cf\u6a21\u5f0f", None))
+
+        self.plan_route.setText(QCoreApplication.translate("MainWindow", u"\u89c4\u5212\u8def\u5f84", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"\u4f7f\u7528\u8bf4\u660e", None))
         self.info_group.setTitle(QCoreApplication.translate("MainWindow", u"\u70b9\u4f4d\u4fe1\u606f", None))
         self.menu_file.setTitle(QCoreApplication.translate("MainWindow", u"\u6587\u4ef6", None))
+        self.menu.setTitle(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa\u8def\u5f84", None))
+        self.menu_2.setTitle(QCoreApplication.translate("MainWindow", u"\u5bfc\u51fa\u8d44\u6e90\u70b9", None))
+        self.menu_3.setTitle(QCoreApplication.translate("MainWindow", u"\u5bfc\u5165\u8def\u5f84", None))
         self.menu_help.setTitle(QCoreApplication.translate("MainWindow", u"\u5e2e\u52a9", None))
         self.menu_map.setTitle(QCoreApplication.translate("MainWindow", u"\u5730\u56fe", None))
     # retranslateUi

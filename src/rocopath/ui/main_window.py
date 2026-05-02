@@ -23,6 +23,7 @@ from rocopath.ui.route_planning_manager import RoutePlanningManager
 from rocopath.core.map_controller import MapController
 from rocopath.models import NpcPoint
 from rocopath.models.path_point import PathPoint
+from rocopath.core.route_planner import NearestNeighborPlanner
 from rocopath.config import BIGWORLD_MAP_ID
 
 
@@ -154,6 +155,8 @@ class MainWindow(QMainWindow):
         self.map_view.path_point_created.connect(self._handle_path_point_created)
         # add_path checkbox
         self.ui.add_path.toggled.connect(self._on_add_path_toggled)
+        # 规划模式
+        self.ui.plan_mode.currentIndexChanged.connect(self._on_plan_mode_changed)
         # 初始化UI状态
         self._route_planning_manager._update_route_ui_state()
 
@@ -373,6 +376,14 @@ class MainWindow(QMainWindow):
         else:
             self.map_view.set_interaction_mode(InteractionMode.NORMAL)
             self.map_scene.leave_add_path_mode()
+
+    def _on_plan_mode_changed(self, index: int) -> None:
+        """规划模式切换：0=快速(最近邻), 1=质量(OR-Tools)"""
+        if index == 0:
+            self.map_scene.set_route_planner(NearestNeighborPlanner())
+        else:
+            from rocopath.core.route_planner import OrToolsTspPlanner
+            self.map_scene.set_route_planner(OrToolsTspPlanner())
 
     def _on_import_old(self) -> None:
         """导入旧版兼容格式"""
