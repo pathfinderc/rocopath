@@ -12,14 +12,17 @@
 """
 
 from collections.abc import Callable
+from typing import Union
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtWidgets import QMessageBox
 from loguru import logger
 
-from rocopath.ui.map_scene import MapScene, PlannedRoute
+from rocopath.ui.map_scene import MapScene, PlannedRoute, PlannablePoint
 from rocopath.ui.npc_point_item import NpcPointItem
+from rocopath.ui.path_point_item import PathPointItem
 from rocopath.core.map_controller import MapController
 from rocopath.models import NpcPoint
+from rocopath.models.path_point import PathPoint
 
 
 class RoutePlanningManager:
@@ -30,8 +33,8 @@ class RoutePlanningManager:
         get_map_scene: Callable[[], MapScene],
         get_map_controller: Callable[[], MapController],
         get_current_map_id: Callable[[], str],
-        get_selected_point: Callable[[], NpcPoint | None],
-        set_selected_point: Callable[[NpcPoint | None], None],
+        get_selected_point: Callable[[], PlannablePoint | None],
+        set_selected_point: Callable[[PlannablePoint | None], None],
         show_point_info: Callable[[str], None],
         show_status: Callable[[str], None],
         set_select_num_text: Callable[[str], None],
@@ -68,9 +71,11 @@ class RoutePlanningManager:
         self._show_status("已清空选中状态")
 
     def on_reset_all(self) -> None:
-        """清空所有路径选择和已规划路径"""
-        self._clear_route_selection_and_routes()
-        logger.debug("清空路径选择和所有已规划路径")
+        """清空所有路径选择和已规划路径，同时移除所有路径点"""
+        self._get_map_scene().clear_route_selection_and_routes()
+        self._get_map_scene().clear_path_points()
+        self._update_route_ui_state()
+        logger.debug("清空路径选择和所有已规划路径及路径点")
 
     def on_plan_route(self) -> None:
         """点击规划路径按钮"""
@@ -104,7 +109,7 @@ class RoutePlanningManager:
             return
 
         selected_points = self._get_map_scene().get_selected_points()
-        selected_ids = {p.refresh_id for p in selected_points}
+        selected_ids = {p.point_id for p in selected_points}
         if not selected_ids:
             self._show_point_info("合并失败：\n请至少框选要合并路径上的点")
             self._show_status("合并失败")
@@ -113,7 +118,7 @@ class RoutePlanningManager:
         all_routes = self._get_map_scene().get_planned_routes()
         candidates = [
             route for route in all_routes
-            if any(p.refresh_id in selected_ids for p in route.points)
+            if any(p.point_id in selected_ids for p in route.points)
         ]
 
         if len(candidates) < 1:
@@ -124,11 +129,11 @@ class RoutePlanningManager:
         start_route = None
         start_is_head = False
         for route in candidates:
-            if route.points[0].refresh_id == start_point.refresh_id:
+            if route.points[0].point_id == start_point.point_id:
                 start_route = route
                 start_is_head = True
                 break
-            if route.points[-1].refresh_id == start_point.refresh_id:
+            if route.points[-1].point_id == start_point.point_id:
                 start_route = route
                 start_is_head = False
                 break
@@ -148,7 +153,7 @@ class RoutePlanningManager:
                         start_point.display_name, len(candidates))
             return
 
-        merged_points: list[NpcPoint] = []
+        merged_points: list[PlannablePoint] = []
         to_remove: list[PlannedRoute] = [start_route]
         candidates.remove(start_route)
         merged_count = 1
@@ -161,12 +166,12 @@ class RoutePlanningManager:
         current_point = merged_points[-1]
 
         while candidates:
-            if current_point.refresh_id not in selected_ids:
+            if current_point.point_id not in selected_ids:
                 break
 
             found = False
             for route in candidates:
-                if route.points[0].refresh_id == current_point.refresh_id:
+                if route.points[0].point_id == current_point.point_id:
                     merged_points.extend(route.points[1:])
                     current_point = route.points[-1]
                     to_remove.append(route)
@@ -174,7 +179,7 @@ class RoutePlanningManager:
                     merged_count += 1
                     found = True
                     break
-                if route.points[-1].refresh_id == current_point.refresh_id:
+                if route.points[-1].point_id == current_point.point_id:
                     merged_points.extend(reversed(route.points[:-1]))
                     current_point = route.points[0]
                     to_remove.append(route)
@@ -212,16 +217,23 @@ class RoutePlanningManager:
         self._show_route_info(merged_points, total_distance)
 
     def on_remove_selected(self) -> None:
-        """删除选中点，断开路径为多条"""
+        """删除选中点，断开路径为多条（路径点同时从场景删除）"""
         selected_points = self._get_map_scene().get_selected_points()
-        to_delete_ids = {p.refresh_id for p in selected_points}
+        to_delete_ids = {p.point_id for p in selected_points}
 
         if not to_delete_ids:
             self._show_point_info("删除失败：\n请先选择要删除的点")
             self._show_status("删除失败")
             return
 
-        all_routes = self._get_map_scene().get_planned_routes().copy()
+        # 路径点：从场景中移除
+        scene = self._get_map_scene()
+        for item in scene._path_point_items[:]:
+            if item.point_id in to_delete_ids:
+                scene.removeItem(item)
+                scene._path_point_items.remove(item)
+
+        all_routes = scene.get_planned_routes().copy()
         map_id = self._get_current_map_id()
         world_map = self._get_map_controller().get_world_map(map_id)
 
@@ -235,18 +247,18 @@ class RoutePlanningManager:
         original_routes_count = len(all_routes)
 
         for route in all_routes:
-            has_deleted = any(p.refresh_id in to_delete_ids for p in route.points)
+            has_deleted = any(p.point_id in to_delete_ids for p in route.points)
             if not has_deleted:
                 continue
 
             self._get_map_scene().remove_route(route)
-            deleted_points_count += sum(1 for p in route.points if p.refresh_id in to_delete_ids)
+            deleted_points_count += sum(1 for p in route.points if p.point_id in to_delete_ids)
 
-            segments: list[list[NpcPoint]] = []
-            current_segment: list[NpcPoint] = []
+            segments: list[list[PlannablePoint]] = []
+            current_segment: list[PlannablePoint] = []
 
             for point in route.points:
-                if point.refresh_id not in to_delete_ids:
+                if point.point_id not in to_delete_ids:
                     current_segment.append(point)
                 else:
                     if len(current_segment) >= 2:
@@ -294,26 +306,45 @@ class RoutePlanningManager:
         logger.debug("框选完成: remove_mode={}, 现在共 {} 个选中",
                     remove_mode, count)
 
-    def handle_point_click(self, item: NpcPointItem) -> None:
+    def handle_point_click(self, item: NpcPointItem | PathPointItem) -> None:
         """处理点选：toggle 选中状态"""
         self._get_map_scene().handle_point_click(item)
         self._update_route_ui_state()
 
-    def on_point_selected(self, refresh_id: int) -> None:
+    def on_point_selected(self, point_id: str) -> None:
         """点位被点击：显示详情并自动设为路径起点"""
+        scene = self._get_map_scene()
+        # 先尝试从 NpcPoint 查找
         map_id = self._get_current_map_id()
-        point = self._get_map_controller().get_point_by_refresh_id(map_id, refresh_id)
-        if point is None:
-            logger.warning("找不到点位: refresh_id={}", refresh_id)
-            return
+        try:
+            raw_id = int(point_id.replace("npc:", ""))
+        except (ValueError, AttributeError):
+            raw_id = -1
 
-        self._get_map_scene().set_selected(refresh_id)
-        self._set_selected_point(point)
-        self._show_point_info_detail(point)
+        if raw_id > 0:
+            point = self._get_map_controller().get_point_by_refresh_id(map_id, raw_id)
+            if point is not None:
+                scene.set_selected(point_id)
+                self._set_selected_point(point)
+                self._show_point_info_detail(point)
+                if scene.is_selected(point_id):
+                    self._set_route_start(point)
+                    self._show_status(f"起点已设置: {point.display_name}")
+                return
 
-        if self._get_map_scene().is_selected(refresh_id):
-            self._set_route_start(point)
-            self._show_status(f"起点已设置: {point.display_name}")
+        # 查找路径点
+        for item in scene._path_point_items:
+            if item.point_id == point_id:
+                pp = item.path_point
+                scene.set_selected(point_id)
+                self._set_selected_point(pp)
+                self._show_point_info_detail(pp)
+                if scene.is_selected(point_id):
+                    self._set_route_start(pp)
+                    self._show_status(f"起点已设置: {pp.display_name}")
+                return
+
+        logger.warning("找不到点位: point_id={}", point_id)
 
     # ===== 内部辅助方法 =====
 
@@ -349,28 +380,38 @@ class RoutePlanningManager:
         self._get_map_scene().clear_route_selection_and_routes()
         self._update_route_ui_state()
 
-    def _set_route_start(self, point: NpcPoint) -> None:
+    def _set_route_start(self, point: PlannablePoint) -> None:
         """设置路径起点"""
         self._get_map_scene().set_route_start(point)
         self._update_route_ui_state()
 
-    def _show_point_info_detail(self, point: NpcPoint) -> None:
+    def _show_point_info_detail(self, point: PlannablePoint) -> None:
         """在信息框显示点位详情"""
-        info = (
-            f"NPC 名称: {point.display_name}\n"
-            f"\n"
-            f"NPC ID: {point.npc.id}\n"
-            f"编辑器名称: {point.npc.editor_name}\n"
-            f"刷新点ID: {point.refresh_id}\n"
-            f"刷新规则: {point.refresh_rule.id} - {point.refresh_rule.description}\n"
-            f"地图ID: {point.area.map_id if point.area else '-'}\n"
-            f"\n"
-            f"世界坐标: {f'({point.area.world_x}, {point.area.world_y})' if point.area else '-'}\n"
-            f"地图坐标: ({point.map_x:.0f}, {point.map_y:.0f})\n"
-        )
+        if isinstance(point, PathPoint):
+            info = (
+                f"路径点: {point.display_name}\n"
+                f"\n"
+                f"ID: {point.point_id}\n"
+                f"标签: {point.label or '-'}\n"
+                f"\n"
+                f"地图坐标: ({point.map_x:.0f}, {point.map_y:.0f})\n"
+            )
+        else:
+            info = (
+                f"NPC 名称: {point.display_name}\n"
+                f"\n"
+                f"NPC ID: {point.npc.id}\n"
+                f"编辑器名称: {point.npc.editor_name}\n"
+                f"刷新点ID: {point.point_id}\n"
+                f"刷新规则: {point.refresh_rule.id} - {point.refresh_rule.description}\n"
+                f"地图ID: {point.area.map_id if point.area else '-'}\n"
+                f"\n"
+                f"世界坐标: {f'({point.area.world_x}, {point.area.world_y})' if point.area else '-'}\n"
+                f"地图坐标: ({point.map_x:.0f}, {point.map_y:.0f})\n"
+            )
         self._show_point_info(info)
 
-    def _show_route_info(self, points: list[NpcPoint], total_distance: float) -> None:
+    def _show_route_info(self, points: list[PlannablePoint], total_distance: float) -> None:
         """在信息框显示路径详情"""
         if not points:
             return
