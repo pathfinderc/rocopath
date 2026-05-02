@@ -88,10 +88,12 @@ class MapScene(QGraphicsScene):
             item.point_selected.connect(self.point_selected.emit)
 
     def clear_points(self) -> None:
-        """清除所有NPC点位（保留已规划路径和路径点）"""
+        """清除所有点位（含路径点）和路线"""
         for item in self._point_items:
             self.removeItem(item)
         self._point_items.clear()
+        self.clear_route_selection_and_routes()
+        self.clear_path_points()
 
     def select_all(self) -> None:
         """全选所有当前点位（含路径点）"""

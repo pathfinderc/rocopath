@@ -177,10 +177,8 @@ class MainWindow(QMainWindow):
         # 先清点位（从列表移除，避免删除已经被scene.clear删除的对象）
         self._clear_point_items()
         self._clear_point_info()
-        # 切换地图清空路径规划选择、路线和路径点
+        # 切换地图清空路径规划选择
         self._clear_route_selection()
-        self._clear_route_selection_and_routes()
-        self.map_scene.clear_path_points()
 
         # 清除旧内容添加新地图
         self.map_scene.add_background_pixmap(pixmap)
