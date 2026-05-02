@@ -13,14 +13,16 @@ from loguru import logger
 
 from rocopath.ui import Ui_MainWindow
 from rocopath.utils import pil_image_to_qimage
-from rocopath.ui.map_view import MapView
-from rocopath.ui.map_scene import MapScene
+from rocopath.ui.map_view import MapView, InteractionMode
+from rocopath.ui.map_scene import MapScene, PlannablePoint
 from rocopath.ui.npc_point_item import NpcPointItem
+from rocopath.ui.path_point_item import PathPointItem
 from rocopath.ui.filter_panel import FilterPanel
 from rocopath.ui.export_import_panel import ExportImportPanel
 from rocopath.ui.route_planning_manager import RoutePlanningManager
 from rocopath.core.map_controller import MapController
 from rocopath.models import NpcPoint
+from rocopath.models.path_point import PathPoint
 from rocopath.config import BIGWORLD_MAP_ID
 
 
@@ -35,7 +37,7 @@ class MainWindow(QMainWindow):
         # 当前地图ID
         self._current_map_id: str = ""
         # 当前点击选中查看信息的点位
-        self._selected_point: NpcPoint | None = None
+        self._selected_point: PlannablePoint | None = None
         # 基础点位集合 - 只由 checkbox 筛选结果决定，line_search 不修改它
         self._base_points: list[NpcPoint] | None = None
         # 筛选面板（处理快捷筛选和规则筛选）
@@ -123,14 +125,12 @@ class MainWindow(QMainWindow):
         self.ui.action_compatible_export.triggered.connect(self._on_compatible_export)
         # 新兼容格式导出
         self.ui.action_new_compatible_export.triggered.connect(self._on_new_compatible_export)
-        # 导出文件（完整NPC点位导出）
-        self.ui.action_export.triggered.connect(self._on_npc_export)
-        # 导出当前显示点位
-        self.ui.action_export_point.triggered.connect(self._on_export_current_points)
-        # 导出所有已规划路径
-        self.ui.action_export_route.triggered.connect(self._on_export_routes)
-        # 导入点位
-        self.ui.action_import.triggered.connect(self._on_npc_import)
+        # 导入资源点文件
+        self.ui.action_import_points.triggered.connect(self._on_npc_import)
+        # 导入兼容格式路径
+        self.ui.action_import_old.triggered.connect(self._on_import_old)
+        self.ui.action_import_new.triggered.connect(self._on_import_new)
+        # action_export / action_export_point / action_export_route / action_export_all_points / action_import_route 暂不连接（预留后续新功能）
 
     def _connect_search(self):
         """连接搜索按钮"""
@@ -150,6 +150,10 @@ class MainWindow(QMainWindow):
         # MapView 信号
         self.map_view.box_selection_finished.connect(self._handle_box_selection)
         self.map_view.point_clicked.connect(self._handle_point_click)
+        self.map_view.path_point_clicked.connect(self._handle_path_point_click)
+        self.map_view.path_point_created.connect(self._handle_path_point_created)
+        # add_path checkbox
+        self.ui.add_path.toggled.connect(self._on_add_path_toggled)
         # 初始化UI状态
         self._route_planning_manager._update_route_ui_state()
 
@@ -173,8 +177,10 @@ class MainWindow(QMainWindow):
         # 先清点位（从列表移除，避免删除已经被scene.clear删除的对象）
         self._clear_point_items()
         self._clear_point_info()
-        # 切换地图清空路径规划选择
+        # 切换地图清空路径规划选择、路线和路径点
         self._clear_route_selection()
+        self._clear_route_selection_and_routes()
+        self.map_scene.clear_path_points()
 
         # 清除旧内容添加新地图
         self.map_scene.add_background_pixmap(pixmap)
@@ -321,9 +327,9 @@ class MainWindow(QMainWindow):
         # 在状态栏显示找到的点位数量
         self.ui.statusbar.showMessage(f"共找到 {len(points)} 个点位")
 
-    def _on_point_selected(self, refresh_id: int):
+    def _on_point_selected(self, point_id: str):
         """点位被点击：显示详情"""
-        self._route_planning_manager.on_point_selected(refresh_id)
+        self._route_planning_manager.on_point_selected(point_id)
 
     def _on_select_all_clicked(self) -> None:
         """全选当前显示的所有点位"""
@@ -350,8 +356,35 @@ class MainWindow(QMainWindow):
         self._route_planning_manager.handle_box_selection(rect, modifiers)
 
     def _handle_point_click(self, item: NpcPointItem) -> None:
-        """处理点选：toggle 选中状态"""
+        """处理NpcPoint点选：toggle 选中状态"""
         self._route_planning_manager.handle_point_click(item)
+
+    def _handle_path_point_click(self, item: PathPointItem) -> None:
+        """处理PathPoint点选：toggle 选中状态"""
+        self._route_planning_manager.handle_point_click(item)
+
+    def _handle_path_point_created(self, scene_pos: QPointF) -> None:
+        """add_path 模式下空白处点击创建路径点"""
+        self.map_scene.add_path_point(scene_pos.x(), scene_pos.y())
+
+    def _on_add_path_toggled(self, checked: bool) -> None:
+        """add_path checkbox 切换"""
+        if checked:
+            self.map_view.set_interaction_mode(InteractionMode.ADD_PATH)
+            self.map_scene.enter_add_path_mode()
+        else:
+            self.map_view.set_interaction_mode(InteractionMode.NORMAL)
+            self.map_scene.leave_add_path_mode()
+
+    def _on_import_old(self) -> None:
+        """导入旧版兼容格式"""
+        assert self._export_import_panel is not None
+        self._export_import_panel.import_compatible_old()
+
+    def _on_import_new(self) -> None:
+        """导入新版兼容格式"""
+        assert self._export_import_panel is not None
+        self._export_import_panel.import_compatible_new()
 
     def _on_plan_route_clicked(self) -> None:
         """点击规划路径按钮"""
