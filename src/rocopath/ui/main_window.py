@@ -397,28 +397,34 @@ Ctrl+右键取消框选点位
 
     def _on_new_compatible_export(self):
         """导出新版兼容格式路径"""
+        assert self._export_import_panel is not None
         self._export_import_panel.export_new_compatible()
 
     def _on_compatible_export(self):
         """导出旧版兼容格式路径"""
+        assert self._export_import_panel is not None
         self._export_import_panel.export_compatible()
 
     def _on_npc_export(self):
         """导出全部NPC点位"""
+        assert self._export_import_panel is not None
         self._export_import_panel.export_npc_points()
 
     def _on_npc_import(self):
         """导入NPC点位"""
+        assert self._export_import_panel is not None
         self._export_import_panel.import_npc_points(
             rebuild_callback=lambda: (self._rebuild_base_points(), self._do_search())
         )
 
     def _on_export_current_points(self):
         """导出当前显示的点位"""
+        assert self._export_import_panel is not None
         self._export_import_panel.export_current_points()
 
     def _on_export_routes(self):
         """导出所有规划路径"""
+        assert self._export_import_panel is not None
         self._export_import_panel.export_routes()
 
     def _set_help_text(self):
