@@ -8,19 +8,25 @@
 """
 
 from dataclasses import dataclass
+from math import sqrt
+from typing import Union
 from PySide6.QtCore import QRectF, Qt, Signal
-from PySide6.QtWidgets import QGraphicsScene, QGraphicsPathItem
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsPathItem, QGraphicsLineItem
 from PySide6.QtGui import QPixmap, QPainterPath, QPen, QColor, QBrush
 from rocopath.ui.npc_point_item import NpcPointItem
+from rocopath.ui.path_point_item import PathPointItem
 from rocopath.core.route_planner import NearestNeighborPlanner, BaseRoutePlanner
 from rocopath.models import NpcPoint, WorldMapInfo
+from rocopath.models.path_point import PathPoint
+
+PlannablePoint = Union[NpcPoint, PathPoint]
 
 
 @dataclass
 class PlannedRoute:
     """已规划的路径"""
 
-    points: list[NpcPoint]  # 路径点位列表
+    points: list[PlannablePoint]  # 路径点位列表
     total_distance: float  # 总距离
     color: tuple[int, int, int, int]  # 路径颜色 (RGBA)
     path_item: QGraphicsPathItem | None = None  # 绘制的路径线
@@ -30,8 +36,8 @@ class PlannedRoute:
 class MapScene(QGraphicsScene):
     """地图场景，管理点位、路径和选择状态"""
 
-    # 点位被点击选中（显示信息）时发出信号，参数是 refresh_id
-    point_selected = Signal(int)
+    # 点位被点击选中（显示信息）时发出信号，参数是 point_id
+    point_selected = Signal(str)
 
     # 预定义路径颜色，循环使用（RGBA，alpha=200 半透明）
     _ROUTE_COLORS: list[tuple[int, int, int, int]] = [
@@ -46,17 +52,23 @@ class MapScene(QGraphicsScene):
 
     def __init__(self, route_planner: BaseRoutePlanner | None = None):
         super().__init__()
-        # 当前显示的点位项
+        # 当前显示的NPC点位项
         self._point_items: list[NpcPointItem] = []
-        # 路径规划相关状态
-        self._route_selected_refresh_ids: set[int] = set()
-        self._route_start_point: NpcPoint | None = None
+        # 路径点（用户自定义点）
+        self._path_point_items: list[PathPointItem] = []
+        # 路径规划相关状态（统一使用 point_id: str）
+        self._route_selected_ids: set[str] = set()
+        self._route_start_point: PlannablePoint | None = None
         # 已规划的路径列表（支持多条路径）
         self._planned_routes: list[PlannedRoute] = []
         # 路径规划算法
         self._route_planner: BaseRoutePlanner = (
             route_planner or NearestNeighborPlanner()
         )
+        # add_path 模式
+        self._is_add_path_mode: bool = False
+        self._in_progress_path: list[PathPoint] = []
+        self._in_progress_lines: list[QGraphicsLineItem] = []
 
     def add_background_pixmap(self, pixmap: QPixmap) -> None:
         """添加背景地图图片"""
@@ -83,21 +95,25 @@ class MapScene(QGraphicsScene):
         self.clear_route_selection_and_routes()
 
     def select_all(self) -> None:
-        """全选所有当前点位"""
+        """全选所有当前点位（含路径点）"""
         for item in self._point_items:
-            if item.refresh_id not in self._route_selected_refresh_ids:
-                self._route_selected_refresh_ids.add(item.refresh_id)
+            if item.point_id not in self._route_selected_ids:
+                self._route_selected_ids.add(item.point_id)
+                item.set_in_box_selection(True)
+        for item in self._path_point_items:
+            if item.point_id not in self._route_selected_ids:
+                self._route_selected_ids.add(item.point_id)
                 item.set_in_box_selection(True)
 
         self._route_start_point = None
 
     def clear_route_selection(self) -> None:
         """清空所有路径选择状态（保留已规划路径）"""
-        # 重置所有点位视觉状态
         for item in self._point_items:
             item.reset_route_selection()
-        # 清空状态
-        self._route_selected_refresh_ids.clear()
+        for item in self._path_point_items:
+            item.reset_route_selection()
+        self._route_selected_ids.clear()
         self._route_start_point = None
 
     def clear_route_selection_and_routes(self) -> None:
@@ -108,60 +124,74 @@ class MapScene(QGraphicsScene):
     def handle_box_selection(
         self, rect: QRectF, modifiers: Qt.KeyboardModifier
     ) -> None:
-        """处理框选完成，更新选中状态"""
+        """处理框选完成，更新选中状态（含路径点）"""
         remove_mode = modifiers & Qt.KeyboardModifier.ControlModifier
 
-        for item in self._point_items:
+        def _process_item(item):
+            nonlocal remove_mode
             pos = item.scenePos()
             if rect.contains(pos):
                 if remove_mode:
-                    if item.refresh_id in self._route_selected_refresh_ids:
-                        self._route_selected_refresh_ids.discard(item.refresh_id)
+                    if item.point_id in self._route_selected_ids:
+                        self._route_selected_ids.discard(item.point_id)
                         item.set_in_box_selection(False)
                         item.set_route_start(False)
                         if (
                             self._route_start_point
-                            and self._route_start_point.refresh_id == item.refresh_id
+                            and self._route_start_point.point_id == item.point_id
                         ):
                             self._route_start_point = None
                 else:
-                    if item.refresh_id not in self._route_selected_refresh_ids:
-                        self._route_selected_refresh_ids.add(item.refresh_id)
+                    if item.point_id not in self._route_selected_ids:
+                        self._route_selected_ids.add(item.point_id)
                         item.set_in_box_selection(True)
 
-    def handle_point_click(self, item: NpcPointItem) -> None:
+        for item in self._point_items:
+            _process_item(item)
+        for item in self._path_point_items:
+            _process_item(item)
+
+    def handle_point_click(self, item: NpcPointItem | PathPointItem) -> None:
         """处理点选，切换选中状态"""
-        if item.refresh_id in self._route_selected_refresh_ids:
-            self._route_selected_refresh_ids.discard(item.refresh_id)
+        if item.point_id in self._route_selected_ids:
+            self._route_selected_ids.discard(item.point_id)
             item.set_in_box_selection(False)
-            # 如果移除的是起点，清空起点
             if (
                 self._route_start_point
-                and self._route_start_point.refresh_id == item.refresh_id
+                and self._route_start_point.point_id == item.point_id
             ):
                 self._route_start_point = None
                 item.set_route_start(False)
         else:
-            self._route_selected_refresh_ids.add(item.refresh_id)
+            self._route_selected_ids.add(item.point_id)
             item.set_in_box_selection(True)
 
-    def set_route_start(self, point: NpcPoint) -> None:
+    def set_route_start(self, point: PlannablePoint) -> None:
         """设置路径起点"""
         # 先清除之前起点状态
         if self._route_start_point:
+            old_id = self._route_start_point.point_id
             for item in self._point_items:
-                if item.refresh_id == self._route_start_point.refresh_id:
+                if item.point_id == old_id:
+                    item.set_route_start(False)
+                    break
+            for item in self._path_point_items:
+                if item.point_id == old_id:
                     item.set_route_start(False)
                     break
 
         # 设置新起点
         self._route_start_point = point
         for item in self._point_items:
-            if item.refresh_id == point.refresh_id:
+            if item.point_id == point.point_id:
                 item.set_route_start(True)
-                break
+                return
+        for item in self._path_point_items:
+            if item.point_id == point.point_id:
+                item.set_route_start(True)
+                return
 
-    def add_route_path(self, points: list[NpcPoint], total_distance: float) -> None:
+    def add_route_path(self, points: list[PlannablePoint], total_distance: float) -> None:
         """添加并绘制一条新路径折线（保留已有路径）"""
         if len(points) < 2:
             return
@@ -240,39 +270,46 @@ class MapScene(QGraphicsScene):
 
     def get_selected_count(self) -> int:
         """获取选中点位数量"""
-        return len(self._route_selected_refresh_ids)
+        return len(self._route_selected_ids)
 
-    def get_route_start(self) -> NpcPoint | None:
+    def get_route_start(self) -> PlannablePoint | None:
         """获取当前路径起点"""
         return self._route_start_point
 
-    def get_selected_points(self) -> list[NpcPoint]:
+    def get_selected_points(self) -> list[PlannablePoint]:
         """获取所有选中的点位"""
-        selected: list[NpcPoint] = []
+        selected: list[PlannablePoint] = []
         for item in self._point_items:
-            if item.refresh_id in self._route_selected_refresh_ids:
+            if item.point_id in self._route_selected_ids:
                 selected.append(item.npc_point)
+        for item in self._path_point_items:
+            if item.point_id in self._route_selected_ids:
+                selected.append(item.path_point)
         return selected
 
-    def get_all_current_points(self) -> list[NpcPoint]:
-        """获取所有当前显示的点位"""
-        all_points: list[NpcPoint] = []
+    def get_all_current_points(self) -> list[PlannablePoint]:
+        """获取所有当前显示的点位（含路径点）"""
+        all_points: list[PlannablePoint] = []
         for item in self._point_items:
             all_points.append(item.npc_point)
+        for item in self._path_point_items:
+            all_points.append(item.path_point)
         return all_points
 
     def has_point_items(self) -> bool:
         """是否有任何点位"""
-        return len(self._point_items) > 0
+        return len(self._point_items) > 0 or len(self._path_point_items) > 0
 
-    def is_selected(self, refresh_id: int) -> bool:
+    def is_selected(self, point_id: str) -> bool:
         """检查该点位是否已被选中"""
-        return refresh_id in self._route_selected_refresh_ids
+        return point_id in self._route_selected_ids
 
-    def set_selected(self, refresh_id: int) -> None:
+    def set_selected(self, point_id: str) -> None:
         """设置信息选中状态，更新所有点位视觉样式"""
         for item in self._point_items:
-            item.set_selected(item.refresh_id == refresh_id)
+            item.set_selected(item.point_id == point_id)
+        for item in self._path_point_items:
+            item.set_selected(item.point_id == point_id)
 
     def get_planned_routes(self) -> list[PlannedRoute]:
         """获取所有已规划的路径"""
@@ -293,7 +330,7 @@ class MapScene(QGraphicsScene):
 
     def add_planned_route(
         self,
-        points: list[NpcPoint],
+        points: list[PlannablePoint],
         total_distance: float,
         color: tuple[int, int, int, int] | None = None,
     ) -> None:
@@ -355,7 +392,7 @@ class MapScene(QGraphicsScene):
             # 自动分配颜色
             self.add_route_path(points, total_distance)
 
-    def plan_route(self, world_map: WorldMapInfo) -> tuple[list[NpcPoint], float]:
+    def plan_route(self, world_map: WorldMapInfo) -> tuple[list[PlannablePoint], float]:
         """规划路径，返回规划好的点位列表和总距离
 
         Args:
@@ -383,3 +420,79 @@ class MapScene(QGraphicsScene):
         self.add_route_path(planned_path, total_distance)
 
         return planned_path, total_distance
+
+    # ===== add_path 模式 =====
+
+    def enter_add_path_mode(self) -> None:
+        """进入路径点创建模式"""
+        self._is_add_path_mode = True
+        for item in self._path_point_items:
+            item.set_movable(True)
+
+    def leave_add_path_mode(self) -> None:
+        """退出路径点创建模式，完成当前路径"""
+        for item in self._path_point_items:
+            item.set_movable(False)
+        if len(self._in_progress_path) >= 2:
+            self._finalize_in_progress_path()
+        self._clear_temp_lines()
+        self._in_progress_path.clear()
+        self._is_add_path_mode = False
+
+    def add_path_point(self, scene_x: float, scene_y: float) -> None:
+        """在 add_path 模式下添加路径点"""
+        point = PathPoint(map_x=scene_x, map_y=scene_y)
+        item = PathPointItem(point)
+        self.addItem(item)
+        self._path_point_items.append(item)
+        item.point_selected.connect(self.point_selected.emit)
+
+        # 绘制到前一个点的临时虚线
+        if self._in_progress_path:
+            prev = self._in_progress_path[-1]
+            line = QGraphicsLineItem(prev.map_x, prev.map_y, scene_x, scene_y)
+            line.setPen(QPen(QColor(100, 149, 237, 180), 2, Qt.PenStyle.DashLine))
+            line.setZValue(4)
+            self.addItem(line)
+            self._in_progress_lines.append(line)
+
+        self._in_progress_path.append(point)
+
+    def add_imported_route(
+        self, path_points: list[PathPoint], total_distance: float, name: str = ""
+    ) -> None:
+        """导入兼容格式路径：创建路径点并绘制路线"""
+        for pp in path_points:
+            item = PathPointItem(pp)
+            self.addItem(item)
+            self._path_point_items.append(item)
+            item.point_selected.connect(self.point_selected.emit)
+
+        if len(path_points) >= 2:
+            self.add_route_path(path_points, total_distance)
+
+    def clear_path_points(self) -> None:
+        """清除所有路径点（reset_all 调用）"""
+        for item in self._path_point_items:
+            self.removeItem(item)
+        self._path_point_items.clear()
+        self._in_progress_path.clear()
+        self._clear_temp_lines()
+
+    # ===== 内部方法 =====
+
+    def _finalize_in_progress_path(self) -> None:
+        """将当前构建中的路径转换为正式路径"""
+        points = list(self._in_progress_path)
+        total_distance = sum(
+            sqrt((a.map_x - b.map_x) ** 2 + (a.map_y - b.map_y) ** 2)
+            for a, b in zip(points, points[1:])
+        )
+        self._clear_temp_lines()
+        self.add_route_path(points, total_distance)
+
+    def _clear_temp_lines(self) -> None:
+        for line in self._in_progress_lines:
+            if line.scene() == self:
+                self.removeItem(line)
+        self._in_progress_lines.clear()
