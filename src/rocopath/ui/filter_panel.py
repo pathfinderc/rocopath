@@ -307,7 +307,9 @@ class FilterPanel:
         """添加一个自定义筛选 checkbox 并连接信号"""
         cb = QCheckBox(qf.display_name)
         cb.setChecked(False)
-        self._custom_layout.addWidget(cb)
+        # 插入到弹簧前面（弹簧始终在最后）
+        idx = self._custom_layout.count() - 1
+        self._custom_layout.insertWidget(max(idx, 0), cb)
         self._quick_filters.append((cb, qf))
         cb.stateChanged.connect(self._on_quick_filter_changed)
 
