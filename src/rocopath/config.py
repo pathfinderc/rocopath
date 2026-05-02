@@ -14,6 +14,7 @@ else:
 
 # 资源路径
 ASSETS_DIR = PROJECT_DIR / "assets"
+CONFIG_DIR = PROJECT_DIR / "config"
 MAP_DATA_DIR = ASSETS_DIR / "maps"
 MAPS_PC_DIR = MAP_DATA_DIR / "Maps_PC"
 MASKS_PC_DIR = MAP_DATA_DIR / "Masks_PC"

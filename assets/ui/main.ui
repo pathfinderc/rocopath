@@ -14,9 +14,12 @@
    <string>洛寻</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,6,2">
+   <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="3,6,3">
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,9">
+      <property name="sizeConstraint">
+       <enum>QLayout::SizeConstraint::SetFixedSize</enum>
+      </property>
       <item>
        <widget class="QGroupBox" name="search_group">
         <property name="title">
@@ -88,6 +91,9 @@
     </item>
     <item>
      <layout class="QVBoxLayout" name="verticalLayout" stretch="4,4,3">
+      <property name="sizeConstraint">
+       <enum>QLayout::SizeConstraint::SetFixedSize</enum>
+      </property>
       <item>
        <widget class="QGroupBox" name="route_group">
         <property name="title">
@@ -127,16 +133,10 @@
          <item>
           <widget class="QPushButton" name="clear_select">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>100</width>
-             <height>60</height>
-            </size>
            </property>
            <property name="text">
             <string>清空选中状态</string>
@@ -145,6 +145,18 @@
          </item>
          <item>
           <widget class="QLabel" name="select_num">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>160</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="text">
             <string>选中点位：</string>
            </property>
@@ -152,6 +164,18 @@
          </item>
          <item>
           <widget class="QLabel" name="start_status">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>160</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="text">
             <string>起点：</string>
            </property>

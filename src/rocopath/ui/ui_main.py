@@ -17,10 +17,10 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGroupBox,
-    QHBoxLayout, QLabel, QLineEdit, QMainWindow,
-    QMenu, QMenuBar, QPushButton, QSizePolicy,
-    QStatusBar, QTabWidget, QTextBrowser, QVBoxLayout,
-    QWidget)
+    QHBoxLayout, QLabel, QLayout, QLineEdit,
+    QMainWindow, QMenu, QMenuBar, QPushButton,
+    QSizePolicy, QStatusBar, QTabWidget, QTextBrowser,
+    QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -63,6 +63,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.verticalLayout_2 = QVBoxLayout()
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         self.search_group = QGroupBox(self.centralwidget)
         self.search_group.setObjectName(u"search_group")
         self.horizontalLayout_2 = QHBoxLayout(self.search_group)
@@ -120,6 +121,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         self.route_group = QGroupBox(self.centralwidget)
         self.route_group.setObjectName(u"route_group")
         self.verticalLayout_3 = QVBoxLayout(self.route_group)
@@ -148,22 +150,24 @@ class Ui_MainWindow(object):
 
         self.clear_select = QPushButton(self.route_group)
         self.clear_select.setObjectName(u"clear_select")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.clear_select.sizePolicy().hasHeightForWidth())
-        self.clear_select.setSizePolicy(sizePolicy2)
-        self.clear_select.setMaximumSize(QSize(100, 60))
+        sizePolicy1.setHeightForWidth(self.clear_select.sizePolicy().hasHeightForWidth())
+        self.clear_select.setSizePolicy(sizePolicy1)
 
         self.verticalLayout_3.addWidget(self.clear_select)
 
         self.select_num = QLabel(self.route_group)
         self.select_num.setObjectName(u"select_num")
+        sizePolicy1.setHeightForWidth(self.select_num.sizePolicy().hasHeightForWidth())
+        self.select_num.setSizePolicy(sizePolicy1)
+        self.select_num.setMaximumSize(QSize(160, 16777215))
 
         self.verticalLayout_3.addWidget(self.select_num)
 
         self.start_status = QLabel(self.route_group)
         self.start_status.setObjectName(u"start_status")
+        sizePolicy1.setHeightForWidth(self.start_status.sizePolicy().hasHeightForWidth())
+        self.start_status.setSizePolicy(sizePolicy1)
+        self.start_status.setMaximumSize(QSize(160, 16777215))
 
         self.verticalLayout_3.addWidget(self.start_status)
 
@@ -251,9 +255,9 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_3.addLayout(self.verticalLayout)
 
-        self.horizontalLayout_3.setStretch(0, 2)
+        self.horizontalLayout_3.setStretch(0, 3)
         self.horizontalLayout_3.setStretch(1, 6)
-        self.horizontalLayout_3.setStretch(2, 2)
+        self.horizontalLayout_3.setStretch(2, 3)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")

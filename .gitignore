@@ -26,5 +26,8 @@ assets/maps/Masks_PC/*
 assets/maps/*
 !assets/maps/.gitkeep
 
+config/*
+config/.gitkeep
+
 # pyinstaller spec
 rocopoth.spec

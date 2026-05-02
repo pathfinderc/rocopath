@@ -5,10 +5,18 @@
 保持主窗口代码简洁，职责分离。
 """
 
+import json
 from dataclasses import dataclass
+from typing import cast
 from collections.abc import Callable
-from PySide6.QtWidgets import QVBoxLayout, QCheckBox, QScrollArea, QWidget, QTabWidget
+from PySide6.QtWidgets import (
+    QVBoxLayout, QHBoxLayout, QCheckBox, QScrollArea,
+    QWidget, QTabWidget, QPushButton, QDialog, QLineEdit,
+    QFormLayout, QListWidget, QListWidgetItem, QMessageBox, QLabel,
+)
+from PySide6.QtCore import Qt
 from rocopath.models import NpcRefreshRule
+from rocopath.config import CONFIG_DIR
 
 
 @dataclass
@@ -129,12 +137,16 @@ class FilterPanel:
         self._rule_checkboxes: dict[int, QCheckBox] = {}
         self._quick_filters: list[tuple[QCheckBox, QuickFilter]] = []
         self._select_all_checkbox: QCheckBox | None = None
+        self._custom_content: QWidget | None = None
+        self._custom_layout: QVBoxLayout  # assigned in _build_custom_filter_tab
+        self._all_rules: list[NpcRefreshRule] = []
 
         self._built = False
 
     def build(self, all_rules: list[NpcRefreshRule]) -> None:
         """构建所有UI元素"""
         self._build_quick_filter_tab()
+        self._build_custom_filter_tab(all_rules)
         self._build_rule_filter_tab(all_rules)
         self._connect_signals()
         self._built = True
@@ -254,6 +266,213 @@ class FilterPanel:
             self._select_all_checkbox.blockSignals(True)
             self._select_all_checkbox.setChecked(all_selected)
             self._select_all_checkbox.blockSignals(False)
+
+    def _build_custom_filter_tab(self, all_rules: list[NpcRefreshRule]) -> None:
+        """构建自定义筛选标签页（第二个标签）"""
+        self._all_rules = all_rules
+
+        tab = self._tab_widget.widget(1)
+        assert tab is not None, "Tab widget 1 (自定义) should exist"
+        layout = cast(QVBoxLayout, tab.layout()) if tab.layout() else QVBoxLayout(tab)
+
+        # 按钮行
+        btn_layout = QHBoxLayout()
+        add_btn = QPushButton("添加")
+        add_btn.clicked.connect(self._on_add_custom_filter)
+        edit_btn = QPushButton("编辑选中")
+        edit_btn.clicked.connect(self._on_edit_custom_filter)
+        del_btn = QPushButton("删除选中")
+        del_btn.clicked.connect(self._on_delete_custom_filters)
+        btn_layout.addWidget(add_btn)
+        btn_layout.addWidget(edit_btn)
+        btn_layout.addWidget(del_btn)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
+
+        # 滚动区域
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        self._custom_content = QWidget()
+        self._custom_layout = QVBoxLayout(self._custom_content)
+        scroll.setWidget(self._custom_content)
+        layout.addWidget(scroll)
+
+        # 从 config.json 加载已保存的自定义筛选
+        for qf in self._load_custom_filters():
+            self._add_custom_checkbox(qf)
+
+        self._custom_layout.addStretch()
+
+    def _add_custom_checkbox(self, qf: QuickFilter) -> None:
+        """添加一个自定义筛选 checkbox 并连接信号"""
+        cb = QCheckBox(qf.display_name)
+        cb.setChecked(False)
+        self._custom_layout.addWidget(cb)
+        self._quick_filters.append((cb, qf))
+        cb.stateChanged.connect(self._on_quick_filter_changed)
+
+    def _show_filter_dialog(
+        self, title: str, existing: QuickFilter | None = None
+    ) -> QuickFilter | None:
+        """弹出添加/编辑自定义筛选对话框，返回 QuickFilter 或 None（取消）"""
+        dlg = QDialog()
+        dlg.setWindowTitle(title)
+        dlg.setMinimumWidth(420)
+        form = QFormLayout(dlg)
+
+        name_edit = QLineEdit()
+        name_edit.setPlaceholderText("例如：我的自定义筛选")
+        if existing:
+            name_edit.setText(existing.display_name)
+        form.addRow("名称:", name_edit)
+
+        kw_edit = QLineEdit()
+        kw_edit.setPlaceholderText("用空格或逗号分隔，例如：关键词1 关键词2")
+        if existing:
+            kw_edit.setText(" ".join(existing.keywords))
+        form.addRow("关键词:", kw_edit)
+
+        form.addRow(QLabel("刷新规则（多选）:"))
+        rule_list = QListWidget()
+        existing_ids = set(existing.rule_ids) if existing else set()
+        for rule in self._all_rules:
+            item = QListWidgetItem(f"{rule.id}: {rule.description}")
+            item.setData(Qt.ItemDataRole.UserRole, rule.id)
+            item.setCheckState(
+                Qt.CheckState.Checked if rule.id in existing_ids else Qt.CheckState.Unchecked
+            )
+            rule_list.addItem(item)
+        form.addRow(rule_list)
+
+        btn_layout = QHBoxLayout()
+        ok_btn = QPushButton("确定")
+        cancel_btn = QPushButton("取消")
+        btn_layout.addWidget(ok_btn)
+        btn_layout.addWidget(cancel_btn)
+        form.addRow(btn_layout)
+
+        ok_btn.clicked.connect(dlg.accept)
+        cancel_btn.clicked.connect(dlg.reject)
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return None
+
+        name = name_edit.text().strip()
+        kw_text = kw_edit.text().strip()
+        if not name:
+            QMessageBox.warning(dlg, "输入错误", "名称不能为空")
+            return None
+
+        keywords = [k.strip() for k in kw_text.replace(",", " ").split() if k.strip()]
+        rule_ids = []
+        for i in range(rule_list.count()):
+            item = rule_list.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                rule_ids.append(item.data(Qt.ItemDataRole.UserRole))
+
+        if not rule_ids:
+            QMessageBox.warning(dlg, "输入错误", "请至少勾选一个刷新规则")
+            return None
+
+        return QuickFilter(display_name=name, keywords=keywords, rule_ids=rule_ids)
+
+    def _on_add_custom_filter(self) -> None:
+        """弹出添加自定义筛选对话框"""
+        qf = self._show_filter_dialog("添加自定义筛选")
+        if qf is not None:
+            self._add_custom_checkbox(qf)
+            self._save_custom_filters()
+
+    def _on_edit_custom_filter(self) -> None:
+        """编辑已勾选的自定义筛选（仅编辑第一个勾选的）"""
+        for cb, qf in self._quick_filters:
+            if qf in self._default_quick_filters:
+                continue
+            if cb.isChecked():
+                new_qf = self._show_filter_dialog("编辑自定义筛选", existing=qf)
+                if new_qf is not None:
+                    cb.setText(new_qf.display_name)
+                    # 更新 QuickFilter（原地修改引用）
+                    qf.display_name = new_qf.display_name
+                    qf.keywords = new_qf.keywords
+                    qf.rule_ids = new_qf.rule_ids
+                    self._save_custom_filters()
+                    self._on_quick_filter_changed()
+                return
+
+        QMessageBox.information(None, "提示", "请先勾选要编辑的自定义筛选项")
+
+    def _on_delete_custom_filters(self) -> None:
+        """删除已勾选的自定义筛选"""
+        # 收集要删除的项（从后往前删避免索引问题）
+        to_remove = []
+        for i, (cb, qf) in enumerate(self._quick_filters):
+            if qf in self._default_quick_filters:
+                continue  # 不删内置的
+            if cb.isChecked():
+                to_remove.append(i)
+
+        if not to_remove:
+            QMessageBox.information(
+                None, "提示",
+                "请先勾选要删除的自定义筛选项（在其 checkbox 上打勾）"
+            )
+            return
+
+        for i in reversed(to_remove):
+            cb, _ = self._quick_filters[i]
+            cb.blockSignals(True)
+            cb.setParent(None)  # 从布局中移除
+            cb.deleteLater()
+            self._quick_filters.pop(i)
+
+        self._save_custom_filters()
+        # 更新规则勾选状态（可能不再需要某些规则）
+        self._update_rule_checkboxes()
+        self._update_select_all_state()
+        self._trigger_filter_changed()
+
+    # ===== config.json 持久化 =====
+
+    def _config_path(self) -> str:
+        return str(CONFIG_DIR / "config.json")
+
+    def _save_custom_filters(self) -> None:
+        """保存自定义筛选到 config.json"""
+        data = {
+            "custom_filters": [
+                {
+                    "display_name": qf.display_name,
+                    "keywords": qf.keywords,
+                    "rule_ids": qf.rule_ids,
+                }
+                for _, qf in self._quick_filters
+                if qf not in self._default_quick_filters
+            ]
+        }
+        try:
+            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            with open(self._config_path(), "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            QMessageBox.warning(None, "保存失败", f"保存自定义筛选失败:\n{e}")
+
+    def _load_custom_filters(self) -> list[QuickFilter]:
+        """从 config.json 加载自定义筛选"""
+        try:
+            with open(self._config_path(), "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
+
+        result = []
+        for entry in data.get("custom_filters", []):
+            result.append(QuickFilter(
+                display_name=entry.get("display_name", ""),
+                keywords=entry.get("keywords", []),
+                rule_ids=entry.get("rule_ids", []),
+            ))
+        return result
 
     def get_selected_rule_ids(self) -> list[int]:
         """获取当前勾选的刷新规则ID"""
