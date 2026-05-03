@@ -63,7 +63,7 @@ class MapScene(QGraphicsScene):
         self._planned_routes: list[PlannedRoute] = []
         # 路径规划算法
         self._route_planner: BaseRoutePlanner = (
-            route_planner or OrToolsTspPlanner(time_limit_sec=3)
+            route_planner or NearestNeighborPlanner()
         )
         # add_path 模式
         self._is_add_path_mode: bool = False

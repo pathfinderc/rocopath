@@ -383,7 +383,7 @@ class MainWindow(QMainWindow):
             self.map_scene.set_route_planner(NearestNeighborPlanner())
         else:
             from rocopath.core.route_planner import OrToolsTspPlanner
-            self.map_scene.set_route_planner(OrToolsTspPlanner())
+            self.map_scene.set_route_planner(OrToolsTspPlanner(time_limit_sec=3))
 
     def _on_import_old(self) -> None:
         """导入旧版兼容格式"""
