@@ -179,6 +179,10 @@ class NpcLoader:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        if "RocoDataRows" not in data:
+            logger.warning("WORLD_MAP_BLOCK_CONF.json 缺少 RocoDataRows，数据可能未解包")
+            return
+
         for row in data["RocoDataRows"].values():
             if "scene_res_id" not in row:
                 continue
@@ -203,6 +207,10 @@ class NpcLoader:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        if "RocoDataRows" not in data:
+            logger.warning("NPC_CONF.json 缺少 RocoDataRows，数据可能未解包")
+            return
+
         skipped_missing = 0
         for npc_id_str, row in data["RocoDataRows"].items():
             if "name" not in row:
@@ -225,6 +233,10 @@ class NpcLoader:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        if "RocoDataRows" not in data:
+            logger.warning("AREA_CONF.json 缺少 RocoDataRows，数据可能未解包")
+            return
+
         for area_id_str, row in data["RocoDataRows"].items():
             area_id = int(area_id_str)
             map_id = str(row["scene_res_id"])
@@ -244,6 +256,10 @@ class NpcLoader:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        if "RocoDataRows" not in data:
+            logger.warning("NPC_REFRESH_RULE_CONF.json 缺少 RocoDataRows，数据可能未解包")
+            return
+
         for rule_id_str, row in data["RocoDataRows"].items():
             rule_id = int(rule_id_str)
             self._refresh_rules[rule_id] = NpcRefreshRule(
@@ -258,6 +274,10 @@ class NpcLoader:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        if "RocoDataRows" not in data:
+            logger.warning("SCENE_OBJECT_CONF.json 缺少 RocoDataRows，数据可能未解包")
+            return
+
         for obj_id_str, row in data["RocoDataRows"].items():
             obj_id = int(obj_id_str)
             self._scene_object_conf[obj_id] = row
@@ -268,6 +288,10 @@ class NpcLoader:
         path = self.data_dir / "NPC_REFRESH_CONTENT_CONF.json"
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
+
+        if "RocoDataRows" not in data:
+            logger.warning("NPC_REFRESH_CONTENT_CONF.json 缺少 RocoDataRows，数据可能未解包")
+            return
 
         skipped_no_param = 0
         skipped_no_area = 0
